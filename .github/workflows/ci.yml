@@ -1,0 +1,37 @@
+name: CI Build & Test
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun Runtime
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Run Unit Tests
+        run: bun test
+
+      - name: Build @webmcp/angular Library
+        run: bun run build:lib
+
+      - name: Build Showcase Application
+        run: bun run build:showcase

@@ -1,0 +1,43 @@
+{
+  "name": "webmcp-angular-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Enterprise Angular Toolkit & 3D Interactive Showcase for WebMCP",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve showcase --port 4200",
+    "build": "ng build ngx-webmcp && ng build showcase",
+    "build:lib": "ng build ngx-webmcp",
+    "build:showcase": "ng build showcase",
+    "watch:lib": "ng build ngx-webmcp --watch",
+    "test": "bun test",
+    "test:coverage": "bun test --coverage"
+  },
+  "dependencies": {
+    "@angular/animations": "^19.2.0",
+    "@angular/common": "^19.2.0",
+    "@angular/compiler": "^19.2.0",
+    "@angular/core": "^19.2.0",
+    "@angular/forms": "^19.2.0",
+    "@angular/platform-browser": "^19.2.0",
+    "@angular/platform-browser-dynamic": "^19.2.0",
+    "@angular/router": "^19.2.0",
+    "rxjs": "^7.8.1",
+    "three": "^0.174.0",
+    "tslib": "^2.8.1",
+    "zone.js": "^0.15.0"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^19.2.0",
+    "@angular/build": "^19.2.0",
+    "@angular/cli": "^19.2.0",
+    "@angular/compiler-cli": "^19.2.0",
+    "@tailwindcss/postcss": "^4.0.9",
+    "@types/node": "^22.13.5",
+    "@types/three": "^0.174.0",
+    "ng-packagr": "^19.2.0",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.0.9",
+    "typescript": "~5.7.3"
+  }
+}
