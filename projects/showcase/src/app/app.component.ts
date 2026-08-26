@@ -1,16 +1,8 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  WebMcpService,
-  WebmcpViewportCaptureService,
-  WebmcpThreeSceneBridge,
-  WebmcpFormRunnerService,
-} from '@webmcp/angular';
+import { RouterOutlet } from '@angular/router';
+import { WebMcpService } from '@webmcp/angular';
 import { HeaderComponent } from './components/header/header.component';
-import { Visualizer3dComponent } from './components/visualizer-3d/visualizer-3d.component';
-import { CustomizerFormComponent } from './components/customizer-form/customizer-form.component';
-import { InspectorComponent } from './components/inspector/inspector.component';
-import { JudgeGuideComponent } from './components/judge-guide/judge-guide.component';
 import { CopilotChatComponent } from './components/copilot-chat/copilot-chat.component';
 
 @Component({
@@ -18,11 +10,8 @@ import { CopilotChatComponent } from './components/copilot-chat/copilot-chat.com
   standalone: true,
   imports: [
     CommonModule,
+    RouterOutlet,
     HeaderComponent,
-    Visualizer3dComponent,
-    CustomizerFormComponent,
-    InspectorComponent,
-    JudgeGuideComponent,
     CopilotChatComponent,
   ],
   templateUrl: './app.component.html',
@@ -30,9 +19,4 @@ import { CopilotChatComponent } from './components/copilot-chat/copilot-chat.com
 })
 export class AppComponent {
   readonly webmcp = inject(WebMcpService);
-  // Inject services to trigger automatic tool registration
-  readonly viewportCapture = inject(WebmcpViewportCaptureService);
-  readonly sceneBridge = inject(WebmcpThreeSceneBridge);
-  readonly formRunner = inject(WebmcpFormRunnerService);
 }
-

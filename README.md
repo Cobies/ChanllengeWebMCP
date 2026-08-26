@@ -1,4 +1,4 @@
-# WebMCP Angular Toolkit & 3D Interactive Showcase 🚀
+# WebMCP Angular Toolkit & 3D Interactive Enterprise Showcase 🚀
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Angular 22](https://img.shields.io/badge/Angular-22.0-dd0031.svg?logo=angular)](https://angular.dev)
@@ -8,7 +8,7 @@
 [![Gemini 3.7 Flash High](https://img.shields.io/badge/AI%20Copilot-Gemini%203.7%20Flash%20High-purple.svg)](https://deepmind.google/technologies/gemini/)
 [![W3C WebMCP Standard](https://img.shields.io/badge/WebMCP-W3C%20Standard-emerald.svg)](https://modelcontextprotocol.io)
 
-An enterprise Angular 22 toolkit and interactive 3D digital twin showcase for the **WebMCP (Model Context Protocol in the Browser)** standard. Seamlessly bridges browser AI agents (Chrome AI, ChatGPT in-app browser, Claude, and **built-in Gemini 3.7 Flash High Copilot**) directly with Angular reactive Signals, client-side Three.js WebGL scenes, declarative template directives, form automation, and multimodal viewport snapshots.
+An enterprise Angular 22 toolkit and multi-route interactive showcase for the **W3C WebMCP (Model Context Protocol in the Browser)** standard. Bridges browser AI agents (Chrome AI, ChatGPT in-app browser, Claude, and **built-in Gemini 3.7 Flash High Copilot**) directly with Angular reactive Signals, client-side Three.js WebGL scenes, enterprise business intelligence analytics, declarative template directives, form automation, and multimodal viewport snapshots.
 
 ---
 
@@ -17,73 +17,66 @@ An enterprise Angular 22 toolkit and interactive 3D digital twin showcase for th
 1. **🤖 Live In-App AI Copilot (Gemini 3.7 Flash High via CPAMC Bridge)**:
    - Built-in conversational chat drawer powered by Gemini 3.7 Flash High through the CPAMC Secure Bridge Proxy (`https://bridge.cobiesscooby.com/v1`).
    - Dynamic WebMCP-to-OpenAI function schema conversion with autonomous multi-turn recursive execution loop (up to 5 turns).
-   - Real-time tool execution pills (duration latency, status badges) and multimodal WebGL canvas screenshot cards with expand lightbox.
+   - Real-time tool execution status pills (duration latency, status badges) and multimodal WebGL canvas screenshot cards with expand lightbox.
 
-2. **Angular 22 Reactive Signals First**:
+2. **📊 Enterprise Business Intelligence & Autonomous Data Tools**:
+   - **4 Enterprise WebMCP Tools** dynamically registered on `/enterprise-bi`:
+     - `query_enterprise_metrics`: Real-time KPI queries by category (financial, performance, infrastructure, security) and time window.
+     - `filter_business_data`: Reactive filtering of transaction datasets by status (`completed`, `pending`, `flagged`), minimum dollar amount, and department.
+     - `calculate_kpi_summary`: Real-time arithmetic aggregations, anomaly detection percentages, and department volume distributions.
+     - `trigger_analytics_export`: Autonomous cryptographic audit export generation (JSON/CSV/PDF) with SHA-256 verification hashes.
+
+3. **🏎️ 3D Digital Twin & Multimodal Viewport Capture**:
+   - Frame-synchronized Three.js bridge (`scene_3d_action`) for camera orbit rotation (`rotate`), zoom (`zoom`), material colors (`change_mesh_color`), animations (`play_animation`), part highlighting (`highlight_part`), and camera resets (`reset_camera`).
+   - Client-side WebGL canvas rasterization (`take_screenshot`) producing zero-latency base64 image data URLs with token-saving LLM context sanitization.
+
+4. **⚡ Multi-Route Shell & Dynamic Tool Lifecycle**:
+   - Decoupled Angular 22 routing architecture:
+     - `/3d-showroom`: 3D Digital Twin viewport, interactive vehicle customizer form, and live event inspector.
+     - `/enterprise-bi`: Enterprise BI dashboard, KPI cards, SVG trend charts, and transactional data intelligence.
+     - `/judge-guide`: Master evaluation rubric, architecture diagrams, and testing checklists for Devpost evaluators.
+   - Route-aware tool registration: Tools register on `ngOnInit` and cleanly unregister on `ngOnDestroy`.
+
+5. **Angular 22 Reactive Signals First**:
    - Seamlessly connect Angular signals (`signal()`, `computed()`, `effect()`) to agent tools using `toWebMcpTool()`.
    - Real-time reactivity with zero change-detection penalty.
 
-3. **Hybrid Context Sensing & Seamless In-Memory Emulator**:
+6. **Hybrid Context Sensing & Seamless In-Memory Emulator**:
    - Automatically detects browser-native `window.modelContext` / `navigator.modelContext` (when Chrome flags are active).
    - Transparently falls back to an in-memory `WebMcpEmulator` for standard browsers, node test runners, and instant developer evaluation.
 
-4. **Multimodal Viewport Capture (`take_screenshot`)**:
-   - 100% client-side WebGL canvas and DOM rasterization producing base64 image data URLs.
-   - Enables browser AI agents to visually inspect 3D scenes and UI state in real time with token-saving LLM payload sanitization.
-
-5. **Interactive 3D WebGL Action Bus (`scene_3d_action`)**:
-   - Frame-synchronized Three.js bridge for camera orbit rotation (`rotate`), zoom (`zoom`), material colors (`change_mesh_color`), animations (`play_animation`), part highlighting (`highlight_part`), and camera resets (`reset_camera`).
-   - Asynchronous action queue with built-in frame timeout protection.
-
-6. **Form Automation Runner (`form_action_runner`)**:
-   - Exposes registered Angular `FormGroup` instances to AI agents for automated field population, validation checking, and action submission.
-
-7. **Live WebMCP Inspector Console**:
-   - Real-time audit stream displaying incoming tool invocations, duration latency, parameter payloads, and results with sanitization and XSS protection.
-
 ---
 
-## 📐 Architecture: Gemini 3.7 Flash High Copilot & WebMCP
+## 📐 Architecture: Multi-Route WebMCP Enterprise Shell
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          CopilotChatComponent (UI)                          │
-│  - Cyberpunk Slide-over Floating Drawer   - Model Selector Dropdown         │
-│  - Quick Prompt Chips                     - Multimodal Image Lightbox       │
-│  - Real-time Tool Execution Status Pills  - Angular 22 Signals State        │
-└──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │
-                                       ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            CopilotBridgeService                             │
-│  - GET /v1/models (Discovery & Fallback)                                    │
-│  - POST /v1/chat/completions (OpenAI Compatible Bridge API)                 │
-│  - WebMCP Tool-to-OpenAI Schema Converter                                   │
-│  - Autonomous Recursive Execution Loop (Max 5 Turns Guard)                  │
-│  - Payload Sanitization & Context Token Optimization                        │
-└──────────────────────┬──────────────────────────────▲───────────────────────┘
-                       │                              │
-     Execute Tool Call │                              │ Tool Result Payload
-                       ▼                              │
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                       WebMcpService (Angular Core)                          │
-│  - registeredTools: Signal<WebMcpToolDefinition[]>                          │
-│  - executionLogs: Signal<WebMcpExecutionLog[]>                              │
-│  - isNativeContext: Signal<boolean>                                         │
-└──────┬──────────────────────┬──────────────────────┬─────────────────┬──────┘
-       │                      │                      │                 │
-       ▼                      ▼                      ▼                 ▼
-┌─────────────────┐   ┌───────────────────┐  ┌──────────────────┐  ┌─────────────┐
-│ Declarative     │   │ 3D Scene Action   │  │ Viewport Capture │  │ Form Runner │
-│ Directives      │   │ Bus (Three.js)    │  │ (take_screenshot)│  │ Service     │
-│ [webmcpTool]    │   │ scene_3d_action   │  │                  │  │             │
-└────────┬────────┘   └─────────┬─────────┘  └─────────┬────────┘  └──────┬──────┘
-       │                      │                      │                 │
-       ▼                      ▼                      ▼                 ▼
-┌─────────────────┐   ┌───────────────────┐  ┌──────────────────┐  ┌─────────────┐
-│ Angular DOM     │   │ WebGL Canvas      │  │ Canvas Rasterizer│  │ Reactive    │
-│ Components      │   │ Three.js Scene    │  │ Base64 PNG/JPEG  │  │ Form State  │
-└─────────────────┘   └───────────────────┘  └──────────────────┘  └─────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                   HeaderComponent                                       │
+│  - Branding & Badges   - Navigation Tabs (/3d-showroom, /enterprise-bi, /judge-guide)     │
+│  - Runtime Badge (Native / Polyfill)   - Route-Aware Simulation Action Bar              │
+└────────────────────────────────────────────┬────────────────────────────────────────────┘
+                                             │
+                      ┌──────────────────────┼──────────────────────┐
+                      ▼                      ▼                      ▼
+┌───────────────────────────┐ ┌───────────────────────────┐ ┌───────────────────────────┐
+│     ShowroomComponent     │ │   EnterpriseBiComponent   │ │    JudgeGuideComponent    │
+│  - Visualizer3dComponent  │ │  - 4 KPI Metric Cards     │ │  - Rubric Checklist Matrix  │
+│  - CustomizerFormComponent│ │  - SVG Latency Trend Chart│ │  - Chrome Flag Instructions │
+│  - InspectorComponent     │ │  - Transaction Data Table │ │  - Copyable Agent Prompts   │
+│  Tools: scene_3d_action,  │ │  - Export Audit Trail     │ │  - System Architecture View │
+│    take_screenshot,       │ │  Tools: query_metrics,    │ │                             │
+│    form_action_runner     │ │    filter_data, kpi_sum,  │ │                             │
+│                           │ │    trigger_export         │ │                             │
+└───────────────────────────┘ └───────────────────────────┘ └───────────────────────────┘
+                                             │
+                                             ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                 CopilotChatComponent                                    │
+│  - Gemini 3.7 Flash High Autonomous Loop (Max 5 Turns)                                   │
+│  - Dynamic WebMCP-to-OpenAI Schema Converter                                            │
+│  - Multimodal WebGL Screenshot Lightbox                                                 │
+│  - Context Token Sanitizer & Malformed JSON Self-Correction                             │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -119,14 +112,22 @@ bun run build
 ## 🧪 Devpost Judge Testing Guide
 
 ### Option A: In-App AI Copilot (Gemini 3.7 Flash High) 🤖 [Recommended]
-1. Click the glowing **"🤖 AI Copilot (Gemini 3.7)"** button in the top navigation header or the bottom-right launcher.
+1. Click the glowing **"🤖 AI Copilot"** button in the top navigation header or the bottom-right launcher.
 2. The Cyberpunk slide-over drawer will expand.
-3. Select any quick action prompt chip or type a custom natural language request:
-   - **📸 Take 3D Screenshot**: *"Take a screenshot of the 3D car viewport and describe the current view."*
-   - **🏎️ Orbit 90° & Neon Cyan**: *"Orbit camera 90 degrees and set vehicle paint to Neon Cyan (#00f0ff)."*
-   - **⚡ Boost Turbo & Sport Rims**: *"Boost turbo, switch to sport rims, autofill pro customizer, and build report."*
-   - **🔄 Reset Camera & Specs**: *"Reset camera to origin and show current vehicle specifications."*
-4. Watch Gemini 3.7 Flash High reason in real time, invoke browser WebMCP tools autonomously, update the 3D scene / form, and render inline screenshot cards!
+3. Select any quick action prompt chip or type custom natural language prompts:
+
+#### 📊 Enterprise BI Scenario:
+> *"Query enterprise metrics for the performance category, filter business data for flagged transactions over $500, calculate KPI summary for revenue_ytd, and export the audit report as CSV."*
+
+#### 🏎️ 3D Visual Inspection Scenario:
+> *"Orbit camera 90 degrees to the right, paint vehicle chassis Neon Cyan (#00f0ff), and take a screenshot to inspect the front aerodynamic intake."*
+
+#### ⚡ Autonomous Form Customizer Scenario:
+> *"Configure the vehicle customizer form: set chassis color to '#00f0ff', select 'Overdrive' drive mode, enable active spoiler, and submit the order."*
+
+4. Watch Gemini 3.7 Flash High reason in real time, invoke browser WebMCP tools autonomously, update the dashboard / 3D viewport, and render rich visual cards!
+
+---
 
 ### Option B: Native Browser WebMCP Testing (Chrome Canary / Chromium)
 1. Open Google Chrome or Chrome Canary and navigate to:
@@ -138,10 +139,26 @@ bun run build
 4. The header status badge will display **Native Browser Context** (Green indicator).
 5. Attached AI agents or browser devtools can now execute tools directly via `window.modelContext`.
 
+---
+
 ### Option C: Seamless In-Memory Emulator (Any Modern Browser)
 - If testing in standard Chrome without flags, Firefox, Safari, or Edge, the application automatically mounts `WebMcpEmulator`.
-- Use the **Agent Simulators** bar in the header or the interactive UI panels to trigger real-time WebMCP tool executions.
-- The **Live WebMCP Inspector** will display the exact parameter contracts and execution metrics.
+- Use the **Agent Simulators** bar in the top navigation header or the interactive UI panels to trigger real-time WebMCP tool executions.
+- The **Live WebMCP Inspector** on `/3d-showroom` displays exact parameter contracts and execution duration metrics.
+
+---
+
+## 🛠️ WebMCP Tool Specifications
+
+| Tool Name | Route | Parameters | Description |
+| :--- | :--- | :--- | :--- |
+| `query_enterprise_metrics` | `/enterprise-bi` | `category?`: string, `timeRange?`: string | Fetches high-level operational KPIs and historical trend series |
+| `filter_business_data` | `/enterprise-bi` | `status?`: string, `minAmount?`: number, `department?`: string | Filters live transactional data table and triggers re-aggregations |
+| `calculate_kpi_summary` | `/enterprise-bi` | `metrics`: string[] | Computes real-time sums, averages, anomaly rates, and breakdowns |
+| `trigger_analytics_export` | `/enterprise-bi` | `format`: 'json'\|'csv'\|'pdf', `filterSummary?`: string | Generates downloadable audit export with SHA-256 integrity hash |
+| `scene_3d_action` | `/3d-showroom` | `action`: string, `deltaX?`: number, `hexColor?`: string, `meshName?`: string | Directs Three.js WebGL scene animations, rotations, and materials |
+| `take_screenshot` | `/3d-showroom` | `selector?`: string, `format?`: string | Captures client-side WebGL canvas as base64 PNG data URL |
+| `form_action_runner` | `/3d-showroom` | `formName`: string, `action`: string, `values?`: object | Fills, validates, and submits Angular Reactive Forms |
 
 ---
 
@@ -168,84 +185,32 @@ ChanllengeWebMCP/
 │       ├── src/
 │       │   ├── app/
 │       │   │   ├── components/
-│       │   │   │   ├── copilot-chat/  # Cyberpunk Gemini 3.7 Copilot Chat Drawer
-│       │   │   │   ├── header/        # Connection status & Copilot trigger button
-│       │   │   │   ├── visualizer-3d/ # Three.js 3D viewport canvas
+│       │   │   │   ├── copilot-chat/   # Cyberpunk Gemini 3.7 Copilot Chat Drawer
+│       │   │   │   ├── enterprise-bi/  # Enterprise BI Dashboard & 4 WebMCP Tools
+│       │   │   │   ├── header/         # Connection status & Navigation Bar
+│       │   │   │   ├── showroom/       # 3D Digital Twin Showroom Shell
+│       │   │   │   ├── visualizer-3d/  # Three.js 3D viewport canvas
 │       │   │   │   ├── customizer-form/# Reactive configuration form
-│       │   │   │   ├── inspector/     # Real-time WebMCP execution console
-│       │   │   │   └── judge-guide/   # In-app judge guide & tabbed prompts
+│       │   │   │   ├── inspector/      # Real-time WebMCP execution console
+│       │   │   │   └── judge-guide/    # Devpost evaluator guide & rubric
+│       │   │   ├── models/
+│       │   │   │   └── enterprise-bi.types.ts # BI data interfaces & contracts
 │       │   │   ├── services/
 │       │   │   │   ├── copilot-bridge.service.ts # CPAMC Bridge & Autonomous Loop
-│       │   │   │   └── copilot-bridge.types.ts   # OpenAI & Model data contracts
-│       │   │   ├── app.component.ts   # Root container component
-│       │   │   ├── app.component.html # Dashboard layout with drawer mount
-│       │   │   └── app.config.ts      # Application config with provideHttpClient() & provideWebMcp()
-│       │   ├── styles.css             # Tailwind CSS v4 directives & theme
-│       │   └── main.ts                # App bootstrap
+│       │   │   │   ├── copilot-bridge.types.ts   # OpenAI & Model data contracts
+│       │   │   │   └── enterprise-data.service.ts # Signals-based business dataset
+│       │   │   ├── app.component.ts    # Shell with RouterOutlet & Header
+│       │   │   ├── app.component.html  # Decoupled root template
+│       │   │   ├── app.config.ts       # Router & WebMCP provider config
+│       │   │   └── app.routes.ts       # Standalone lazy routes definition
+│       │   ├── styles.css              # Tailwind CSS v4 directives & theme
+│       │   └── main.ts                 # App bootstrap
 │       └── tsconfig.app.json
-├── angular.json                       # Angular CLI multi-project workspace config
-├── package.json                       # Root workspace scripts & dependencies
-├── tsconfig.json                      # Path aliases for @webmcp/angular
-├── LICENSE                            # MIT License
-└── README.md                          # Documentation & Devpost Submission Guide
-```
-
----
-
-## 💻 Library Usage in Your Angular Apps
-
-### 1. Configure Provider in `app.config.ts`
-```typescript
-import { ApplicationConfig } from '@angular/core';
-import { provideHttpClient } from '@angular/common/http';
-import { provideWebMcp } from '@webmcp/angular';
-
-export const appConfig: ApplicationConfig = {
-  providers: [
-    provideHttpClient(),
-    provideWebMcp({
-      enableEmulatorFallback: true,
-      enableBuiltInScreenshot: true,
-      logExecutionToConsole: true
-    })
-  ]
-};
-```
-
-### 2. Declarative Template Directive `[webmcpTool]`
-```html
-<div
-  webmcpTool
-  toolName="set_ui_theme"
-  toolDescription="Switches the active application color palette"
-  [toolParameters]="{
-    type: 'object',
-    properties: {
-      theme: { type: 'string', enum: ['dark', 'light', 'cyber'] }
-    },
-    required: ['theme']
-  }"
-  (toolInvoked)="onThemeChange($event)">
-</div>
-```
-
-### 3. Reactive Signal Binding `toWebMcpTool()`
-```typescript
-import { Component, signal } from '@angular/core';
-import { toWebMcpTool } from '@webmcp/angular';
-
-@Component({ ... })
-export class MyComponent {
-  readonly vehicleColor = signal('#00f0ff');
-
-  constructor() {
-    toWebMcpTool(this.vehicleColor, {
-      name: 'set_vehicle_color',
-      description: 'Updates vehicle paint color',
-      transform: (p) => String(p['color'])
-    });
-  }
-}
+├── angular.json                        # Angular CLI multi-project workspace config
+├── package.json                        # Root workspace scripts & dependencies
+├── tsconfig.json                       # Path aliases for @webmcp/angular
+├── LICENSE                             # MIT License
+└── README.md                           # Documentation & Devpost Submission Guide
 ```
 
 ---
@@ -255,6 +220,7 @@ export class MyComponent {
 - **Autonomous Loop Recursion Guard**: Prevents infinite tool-calling loops by enforcing a strict 5-turn hard cap with clear user notification.
 - **Malformed JSON Recovery**: Catches syntax errors in LLM function arguments and feeds structured error diagnostics back to the model for self-correction.
 - **Context Window Token Optimization**: Automatically sanitizes large Base64 PNGs (~500KB) from `take_screenshot` when sending context back to the LLM while preserving rich previews in the UI.
+- **Dynamic Tool Lifecycle Isolation**: Tools register on route entry and unregister on leave, preventing namespace collisions and stale invocations.
 - **Parameter Validation**: Input parameters are strictly validated against JSON Schema / typing contracts before executing handlers.
 - **Tainted Canvas Safeguards**: Canvas readbacks catch cross-origin or buffer security violations and return structured error payloads without crashing.
 - **XSS Prevention**: Inspector log visualizer truncates large binary payloads and sanitizes JSON outputs.

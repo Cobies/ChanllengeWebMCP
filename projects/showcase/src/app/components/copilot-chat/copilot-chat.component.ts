@@ -429,14 +429,24 @@ export class CopilotChatComponent implements AfterViewChecked {
       prompt: 'Orbit camera 90 degrees and set vehicle paint to Neon Cyan (#00f0ff).',
     },
     {
-      label: 'Boost Turbo & Sport Rims',
-      icon: '⚡',
-      prompt: 'Boost turbo, switch to sport rims, autofill pro customizer, and build report.',
+      label: 'Query BI Performance Metrics',
+      icon: '📈',
+      prompt: 'Query enterprise metrics for the performance category and summarize system latency.',
     },
     {
-      label: 'Reset Camera & Specs',
-      icon: '🔄',
-      prompt: 'Reset camera to origin and show current vehicle specifications.',
+      label: 'Filter Flagged Transactions',
+      icon: '🚨',
+      prompt: 'Filter business data to show flagged anomalous transactions with amount greater than 500.',
+    },
+    {
+      label: 'Calculate KPI & Export CSV',
+      icon: '📑',
+      prompt: 'Calculate KPI summary for revenue_ytd and active_nodes, then trigger an analytics export in CSV format.',
+    },
+    {
+      label: 'Boost Turbo & Pro Customizer',
+      icon: '⚡',
+      prompt: 'Boost turbo, switch to sport rims, autofill pro customizer, and build report.',
     },
   ];
 
