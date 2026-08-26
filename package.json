@@ -5,7 +5,7 @@
   "description": "Enterprise Angular Toolkit & 3D Interactive Showcase for WebMCP",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve showcase --port 4200",
+    "start": "ng serve showcase --port 4200 --poll 1000",
     "build": "ng build ngx-webmcp && ng build showcase",
     "build:lib": "ng build ngx-webmcp",
     "build:showcase": "ng build showcase",
