@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { WebMcpService } from '@webmcp/angular';
+import { CopilotBridgeService } from '../../services/copilot-bridge.service';
 
 @Component({
   selector: 'app-header',
@@ -55,6 +56,17 @@ import { WebMcpService } from '@webmcp/angular';
             <span class="font-semibold text-purple-400">{{ webmcp.registeredTools().length }}</span>
             <span class="text-slate-400">Tools Online</span>
           </div>
+
+          <!-- AI Copilot Glowing Trigger Button -->
+          <button
+            (click)="openCopilot()"
+            class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500/20 to-purple-600/20 hover:from-cyan-500/30 hover:to-purple-600/30 border border-cyan-500/50 hover:border-cyan-400 text-xs font-semibold text-cyan-300 shadow-md shadow-cyan-500/20 transition-all flex items-center gap-1.5 group">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
+            </span>
+            <span>🤖 AI Copilot (Gemini 3.7)</span>
+          </button>
 
           <!-- Devpost GitHub Link -->
           <a
@@ -112,6 +124,11 @@ import { WebMcpService } from '@webmcp/angular';
 })
 export class HeaderComponent {
   readonly webmcp = inject(WebMcpService);
+  readonly copilot = inject(CopilotBridgeService);
+
+  openCopilot(): void {
+    this.copilot.openDrawer();
+  }
 
   async triggerOrbit(): Promise<void> {
     try {
@@ -159,3 +176,4 @@ export class HeaderComponent {
     }
   }
 }
+

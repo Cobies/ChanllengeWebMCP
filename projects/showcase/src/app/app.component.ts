@@ -11,6 +11,7 @@ import { Visualizer3dComponent } from './components/visualizer-3d/visualizer-3d.
 import { CustomizerFormComponent } from './components/customizer-form/customizer-form.component';
 import { InspectorComponent } from './components/inspector/inspector.component';
 import { JudgeGuideComponent } from './components/judge-guide/judge-guide.component';
+import { CopilotChatComponent } from './components/copilot-chat/copilot-chat.component';
 
 @Component({
   selector: 'app-root',
@@ -22,6 +23,7 @@ import { JudgeGuideComponent } from './components/judge-guide/judge-guide.compon
     CustomizerFormComponent,
     InspectorComponent,
     JudgeGuideComponent,
+    CopilotChatComponent,
   ],
   templateUrl: './app.component.html',
   styleUrls: [],
@@ -33,3 +35,4 @@ export class AppComponent {
   readonly sceneBridge = inject(WebmcpThreeSceneBridge);
   readonly formRunner = inject(WebmcpFormRunnerService);
 }
+

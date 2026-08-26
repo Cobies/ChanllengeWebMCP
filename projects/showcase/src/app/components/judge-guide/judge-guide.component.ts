@@ -26,6 +26,12 @@ import { CommonModule } from '@angular/common';
 
         <div class="flex gap-1.5">
           <button
+            (click)="activeTab.set('copilot')"
+            class="px-2.5 py-1 text-xs rounded-lg transition-all font-medium"
+            [ngClass]="activeTab() === 'copilot' ? 'bg-gradient-to-r from-cyan-500/20 to-purple-600/20 text-cyan-300 border border-cyan-500/40' : 'bg-slate-900 text-slate-400 hover:text-slate-200'">
+            🤖 Gemini Copilot
+          </button>
+          <button
             (click)="activeTab.set('chrome')"
             class="px-2.5 py-1 text-xs rounded-lg transition-all font-medium"
             [ngClass]="activeTab() === 'chrome' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-slate-900 text-slate-400 hover:text-slate-200'">
@@ -45,6 +51,32 @@ import { CommonModule } from '@angular/common';
           </button>
         </div>
       </div>
+
+      <!-- Tab Content: Gemini Copilot Guide -->
+      @if (activeTab() === 'copilot') {
+        <div class="space-y-3 text-xs text-slate-300">
+          <div class="p-3 rounded-xl bg-gradient-to-r from-cyan-950/40 to-purple-950/30 border border-cyan-500/30 space-y-2">
+            <h3 class="font-bold text-cyan-400 flex items-center gap-1.5">
+              <span>🤖 Live In-App Conversational Copilot</span>
+              <span class="px-1.5 py-0.5 text-[9px] rounded bg-purple-500/20 text-purple-300 border border-purple-400/30 font-mono">Gemini 3.7 Flash High</span>
+            </h3>
+            <p class="text-slate-300 leading-relaxed">
+              Click the glowing <strong class="text-cyan-300">"AI Copilot"</strong> button in the top header or the bottom-right floating launcher. The agent connects to the CPAMC Bridge Proxy, auto-discovers browser WebMCP tools, and runs an autonomous recursive execution loop up to 5 turns.
+            </p>
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <div class="p-2 rounded-lg bg-slate-950/70 border border-slate-800">
+                <span class="text-cyan-400 font-mono text-[10px] block">📸 Viewport Inspection</span>
+                <span class="text-slate-400 text-[11px]">Takes WebGL screenshots and renders instant cards in chat.</span>
+              </div>
+              <div class="p-2 rounded-lg bg-slate-950/70 border border-slate-800">
+                <span class="text-purple-400 font-mono text-[10px] block">⚡ 3D & Form Automation</span>
+                <span class="text-slate-400 text-[11px]">Rotates vehicle, changes materials, and autofills forms.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
 
       <!-- Tab Content: Chrome Flag Setup -->
       @if (activeTab() === 'chrome') {
@@ -142,5 +174,6 @@ import { CommonModule } from '@angular/common';
   `,
 })
 export class JudgeGuideComponent {
-  activeTab = signal<'chrome' | 'agent' | 'architecture'>('chrome');
+  activeTab = signal<'copilot' | 'chrome' | 'agent' | 'architecture'>('copilot');
 }
+
