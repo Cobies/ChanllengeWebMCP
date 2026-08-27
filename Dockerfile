@@ -18,8 +18,8 @@ COPY . .
 # Build the Angular SSR application (Node executes ESM loader hooks)
 RUN bun run build
 
-# Stage 2: Minimal production runtime with Node 22
-FROM node:22-alpine AS runner
+# Stage 2: Minimal production runtime with Bun
+FROM oven/bun:1-alpine AS runner
 
 WORKDIR /app
 
@@ -32,4 +32,4 @@ COPY package.json ./
 
 EXPOSE 4000
 
-CMD ["node", "dist/ChallengeWebMCP/server/server.mjs"]
+CMD ["bun", "dist/ChallengeWebMCP/server/server.mjs"]
