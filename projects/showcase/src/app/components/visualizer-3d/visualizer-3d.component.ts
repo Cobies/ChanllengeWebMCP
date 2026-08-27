@@ -17,65 +17,65 @@ import { WebmcpThreeSceneBridge } from '@webmcp/angular';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="relative w-full h-[460px] lg:h-[540px] rounded-2xl overflow-hidden glass-panel-glow border border-cyan-500/20 bg-slate-950/90 shadow-2xl">
+    <div class="relative w-full h-[460px] lg:h-[540px] rounded-2xl overflow-hidden glass-panel-glow border border-cyan-500/30 bg-[#f0ebe1]/70 shadow-xl">
       <!-- 3D Canvas Container -->
       <canvas #viewportCanvas class="w-full h-full block cursor-grab active:cursor-grabbing"></canvas>
 
       <!-- Viewport Overlay HUD -->
       <div class="absolute top-4 left-4 flex flex-col gap-1 pointer-events-none">
         <div class="flex items-center gap-2">
-          <span class="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-          <span class="text-xs font-bold tracking-wider uppercase text-cyan-300">
+          <span class="inline-block w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></span>
+          <span class="text-xs font-bold tracking-wider uppercase text-cyan-800">
             WebGL 3D Digital Twin
           </span>
         </div>
-        <p class="text-[11px] text-slate-400 font-mono">
+        <p class="text-[11px] text-slate-500 font-mono">
           Apex Cyber-Cruiser MK-IV • Three.js WebGL
         </p>
       </div>
 
       <!-- Quick View Controls HUD -->
-      <div class="absolute bottom-4 right-4 flex items-center gap-1.5 bg-slate-950/80 p-1.5 rounded-xl border border-slate-800 backdrop-blur-md">
+      <div class="absolute bottom-4 right-4 flex items-center gap-1.5 bg-white/80 p-1.5 rounded-xl border border-slate-200/80 backdrop-blur-md shadow-sm">
         <button
           (click)="orbitLeft()"
           title="Orbit Left"
-          class="p-2 rounded-lg bg-slate-900 hover:bg-cyan-950/60 text-slate-300 hover:text-cyan-400 border border-slate-800 hover:border-cyan-500/30 transition-all text-xs">
+          class="p-2 rounded-lg bg-white hover:bg-cyan-50 text-slate-700 hover:text-cyan-700 border border-slate-200/80 hover:border-cyan-500/30 transition-all text-xs shadow-xs">
           ◀
         </button>
         <button
           (click)="orbitRight()"
           title="Orbit Right"
-          class="p-2 rounded-lg bg-slate-900 hover:bg-cyan-950/60 text-slate-300 hover:text-cyan-400 border border-slate-800 hover:border-cyan-500/30 transition-all text-xs">
+          class="p-2 rounded-lg bg-white hover:bg-cyan-50 text-slate-700 hover:text-cyan-700 border border-slate-200/80 hover:border-cyan-500/30 transition-all text-xs shadow-xs">
           ▶
         </button>
         <button
           (click)="zoomIn()"
           title="Zoom In"
-          class="p-2 rounded-lg bg-slate-900 hover:bg-cyan-950/60 text-slate-300 hover:text-cyan-400 border border-slate-800 hover:border-cyan-500/30 transition-all text-xs font-bold">
+          class="p-2 rounded-lg bg-white hover:bg-cyan-50 text-slate-700 hover:text-cyan-700 border border-slate-200/80 hover:border-cyan-500/30 transition-all text-xs font-bold shadow-xs">
           +
         </button>
         <button
           (click)="zoomOut()"
           title="Zoom Out"
-          class="p-2 rounded-lg bg-slate-900 hover:bg-cyan-950/60 text-slate-300 hover:text-cyan-400 border border-slate-800 hover:border-cyan-500/30 transition-all text-xs font-bold">
+          class="p-2 rounded-lg bg-white hover:bg-cyan-50 text-slate-700 hover:text-cyan-700 border border-slate-200/80 hover:border-cyan-500/30 transition-all text-xs font-bold shadow-xs">
           -
         </button>
         <button
           (click)="resetView()"
           title="Reset Camera"
-          class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 transition-all text-xs">
+          class="px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 border border-slate-200/80 transition-all text-xs shadow-xs">
           Reset
         </button>
       </div>
 
       <!-- Agent Target Identification Chips -->
-      <div class="absolute bottom-4 left-4 hidden sm:flex items-center gap-1.5 text-[10px] font-mono text-slate-500 bg-slate-950/70 px-2.5 py-1 rounded-lg border border-slate-900">
+      <div class="absolute bottom-4 left-4 hidden sm:flex items-center gap-1.5 text-[10px] font-mono text-slate-600 bg-white/80 px-2.5 py-1 rounded-lg border border-slate-200/80 backdrop-blur-md shadow-xs">
         <span>Meshes:</span>
-        <span class="text-cyan-400">#vehicle_chassis</span>
+        <span class="text-cyan-700">#vehicle_chassis</span>
         <span>•</span>
-        <span class="text-purple-400">#cabin_glass</span>
+        <span class="text-purple-700">#cabin_glass</span>
         <span>•</span>
-        <span class="text-emerald-400">#neon_underglow</span>
+        <span class="text-emerald-700">#neon_underglow</span>
       </div>
     </div>
   `,
@@ -127,8 +127,8 @@ export class Visualizer3dComponent implements OnInit, AfterViewInit, OnDestroy {
 
     // Scene
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x07090e);
-    this.scene.fog = new THREE.FogExp2(0x07090e, 0.04);
+    this.scene.background = new THREE.Color(0xf4f0e6);
+    this.scene.fog = new THREE.FogExp2(0xf4f0e6, 0.03);
 
     // Camera
     this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
@@ -148,20 +148,20 @@ export class Visualizer3dComponent implements OnInit, AfterViewInit, OnDestroy {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
     this.scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0x00f0ff, 1.8);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
     dirLight.position.set(5, 10, 7);
     dirLight.castShadow = true;
     this.scene.add(dirLight);
 
-    const purpleLight = new THREE.PointLight(0xa855f7, 2, 15);
-    purpleLight.position.set(-4, 3, -3);
-    this.scene.add(purpleLight);
+    const pointLight = new THREE.PointLight(0x0284c7, 1.5, 15);
+    pointLight.position.set(-4, 3, -3);
+    this.scene.add(pointLight);
 
     // Grid Floor
-    const grid = new THREE.GridHelper(20, 20, 0x00f0ff, 0x1e293b);
+    const grid = new THREE.GridHelper(20, 20, 0x0284c7, 0xd6cfc2);
     grid.position.y = -0.01;
     this.scene.add(grid);
   }
