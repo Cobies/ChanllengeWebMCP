@@ -1,0 +1,12 @@
+services:
+  challenge-webmcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: challenge-webmcp-ssr
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
