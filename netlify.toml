@@ -1,9 +1,0 @@
-[build]
-  command = "bun run build"
-  publish = "dist/ChallengeWebMCP/browser"
-
-[build.environment]
-  ANGULAR_PROJECT = "ChallengeWebMCP"
-
-[[plugins]]
-  package = "@netlify/angular-runtime"
