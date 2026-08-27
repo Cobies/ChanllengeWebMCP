@@ -1,5 +1,6 @@
 services:
   challenge-webmcp:
+    image: cobies/challenge-webmcp:latest
     build:
       context: .
       dockerfile: Dockerfile
