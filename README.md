@@ -113,6 +113,50 @@ bun run build
 
 ---
 
+## 🐳 Docker & Portainer Deployment (SSR)
+
+The project includes a production-ready, multi-stage Docker configuration using **Bun** for high-speed compilation and lightweight SSR execution.
+
+### 1. Build & Push to Docker Hub
+```bash
+# Build image tagged as cobies/challenge-webmcp:latest
+docker compose build
+
+# Push to Docker Hub
+docker compose push
+```
+
+*(Or via standard Docker CLI)*:
+```bash
+docker build -t cobies/challenge-webmcp:latest .
+docker push cobies/challenge-webmcp:latest
+```
+
+### 2. Run Locally with Docker Compose
+```bash
+docker compose up -d
+```
+The server binds to `http://127.0.0.1:50016` (mapped internally to SSR port `4000`).
+
+### 3. Deploy in Portainer (Stack Web Editor)
+1. Open Portainer and go to **Stacks** > **Add stack**.
+2. Paste the stack definition:
+```yaml
+services:
+  challenge-webmcp:
+    image: cobies/challenge-webmcp:latest
+    container_name: challenge-webmcp-ssr
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:50016:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+```
+3. Click **Deploy the stack**.
+
+---
+
 ## 🧪 Devpost Judge Testing Guide
 
 ### Option A: In-App AI Copilot (Gemini 3.7 Flash High) 🤖 [Recommended]
