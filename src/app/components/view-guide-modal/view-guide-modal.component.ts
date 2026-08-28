@@ -306,19 +306,27 @@ import { CopilotBridgeService } from '../../services/copilot-bridge.service';
                         </tr>
                       </tbody>
                     </table>
+                  </div>
+                </div>
+
+                <!-- Sample AI Copilot Prompts -->
+                <div class="space-y-2">
+                  <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wider">Try with AI Copilot:</h4>
+                  <div class="space-y-2">
+                    <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
                       <span class="text-slate-700 font-mono text-[11px]">"Query enterprise metrics for the performance category, and filter business data for flagged transactions over $500."</span>
                       <button
-                        (click)="copyPrompt('Query enterprise metrics for the performance category, and filter business data for flagged transactions over $500.')"
-                        class="px-2.5 py-1 rounded bg-white hover:bg-slate-100 border border-slate-200 text-[10px] font-mono text-slate-600 transition-colors shrink-0 shadow-2xs cursor-pointer">
-                        Copy
+                        (click)="runPrompt('Query enterprise metrics for the performance category, and filter business data for flagged transactions over $500.')"
+                        class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold shrink-0 transition-colors shadow-2xs cursor-pointer">
+                        Run in Copilot 🤖
                       </button>
                     </div>
                     <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
                       <span class="text-slate-700 font-mono text-[11px]">"Check items in manufacturing domain with low stock, and trigger an urgent reorder of 50 units."</span>
                       <button
-                        (click)="copyPrompt('Check items in manufacturing domain with low stock, and trigger an urgent reorder of 50 units.')"
-                        class="px-2.5 py-1 rounded bg-white hover:bg-slate-100 border border-slate-200 text-[10px] font-mono text-slate-600 transition-colors shrink-0 shadow-2xs cursor-pointer">
-                        Copy
+                        (click)="runPrompt('Query inventory for manufacturing domain, find low stock items, and reorder 50 units with urgent priority.')"
+                        class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold shrink-0 transition-colors shadow-2xs cursor-pointer">
+                        Run in Copilot 🤖
                       </button>
                     </div>
                   </div>
@@ -368,7 +376,7 @@ import { CopilotBridgeService } from '../../services/copilot-bridge.service';
             }
 
             <!-- TAB 4: JUDGE GUIDE & RUBRIC -->
-            @if (guideService.activeTab() === 'judge') {
+            @if (guideService.activeTab() === 'judge-guide') {
               <div class="space-y-5 animate-fadeIn">
                 <div class="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-1">
                   <h3 class="text-sm font-bold text-emerald-900 flex items-center gap-2">
