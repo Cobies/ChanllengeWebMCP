@@ -1,3 +1,5 @@
+import { InjectionToken, DestroyRef } from '@angular/core';
+
 /**
  * WebMCP Core Type Definitions and Protocol Contracts.
  * Conforms to W3C Model Context Protocol in the Browser specifications.
@@ -69,6 +71,49 @@ export interface BrowserModelContext {
   executeTool(name: string, parameters?: Record<string, unknown>): Promise<unknown>;
   addEventListener?(type: string, listener: (event: CustomEvent) => void): void;
   removeEventListener?(type: string, listener: (event: CustomEvent) => void): void;
+}
+
+/* ==========================================================================
+   Interceptor Pipeline & Middleware Types
+   ========================================================================== */
+
+export interface WebMcpExecutionContext {
+  toolName: string;
+  parameters: Record<string, unknown>;
+  source: 'native' | 'emulator' | 'ui';
+  metadata?: Record<string, unknown>;
+}
+
+export type WebMcpHandler = (context: WebMcpExecutionContext) => Promise<unknown>;
+
+export interface WebMcpInterceptor {
+  intercept(context: WebMcpExecutionContext, next: WebMcpHandler): Promise<unknown>;
+}
+
+export type WebMcpInterceptorFn = (
+  context: WebMcpExecutionContext,
+  next: WebMcpHandler
+) => Promise<unknown>;
+
+export const WEBMCP_INTERCEPTORS = new InjectionToken<WebMcpInterceptor[]>('WEBMCP_INTERCEPTORS');
+
+/* ==========================================================================
+   Reactive Signal Tool Options
+   ========================================================================== */
+
+export interface SignalToolOptions<T> {
+  name: string;
+  description: string;
+  parameters?: WebMcpToolParameterSchema;
+  /**
+   * Value transformer for converting agent parameters to signal value.
+   */
+  transform?: (params: Record<string, unknown>) => T;
+  /**
+   * Explicit DestroyRef to bind lifecycle teardown.
+   * If omitted, DestroyRef is resolved via inject(DestroyRef, { optional: true }).
+   */
+  destroyRef?: DestroyRef;
 }
 
 /* ==========================================================================

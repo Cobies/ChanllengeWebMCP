@@ -2,8 +2,13 @@ import { Injectable, Inject, Optional, InjectionToken, signal, computed } from '
 import {
   BrowserModelContext,
   WebMcpConfig,
+  WebMcpExecutionContext,
   WebMcpExecutionLog,
+  WebMcpHandler,
+  WebMcpInterceptor,
+  WebMcpInterceptorFn,
   WebMcpToolDefinition,
+  WEBMCP_INTERCEPTORS,
 } from './webmcp.types';
 import { WebMcpEmulator } from './webmcp.emulator';
 
@@ -15,12 +20,25 @@ const DEFAULT_CONFIG: WebMcpConfig = {
   logExecutionToConsole: true,
 };
 
+function normalizeInterceptor(
+  item: WebMcpInterceptor | WebMcpInterceptorFn
+): WebMcpInterceptor {
+  if (typeof item === 'function') {
+    return {
+      intercept: (context: WebMcpExecutionContext, next: WebMcpHandler) => item(context, next),
+    };
+  }
+  return item;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class WebMcpService {
   private config: WebMcpConfig;
   private context: BrowserModelContext;
+  private readonly diInterceptors: (WebMcpInterceptor | WebMcpInterceptorFn)[];
+  private readonly _dynamicInterceptors = signal<WebMcpInterceptor[]>([]);
   private readonly _isNativeContext = signal<boolean>(false);
   private readonly _tools = signal<Map<string, WebMcpToolDefinition>>(new Map());
   private readonly _logs = signal<WebMcpExecutionLog[]>([]);
@@ -46,11 +64,32 @@ export class WebMcpService {
    */
   readonly isReady = this._isReady.asReadonly();
 
-  constructor(@Optional() @Inject(WEBMCP_CONFIG) config?: WebMcpConfig) {
+  constructor(
+    @Optional() @Inject(WEBMCP_CONFIG) config?: WebMcpConfig,
+    @Optional() @Inject(WEBMCP_INTERCEPTORS)
+    diInterceptors?: (WebMcpInterceptor | WebMcpInterceptorFn)[] | (WebMcpInterceptor | WebMcpInterceptorFn)[][]
+  ) {
     this.config = { ...DEFAULT_CONFIG, ...(config || {}) };
+    this.diInterceptors = diInterceptors
+      ? (diInterceptors.flat(Infinity as 1) as (WebMcpInterceptor | WebMcpInterceptorFn)[])
+      : [];
     this.context = this.resolveContext();
     this.initContextListeners();
     this._isReady.set(true);
+  }
+
+  /**
+   * Programmatically register a runtime interceptor.
+   * @returns Teardown function to remove the interceptor.
+   */
+  addInterceptor(interceptor: WebMcpInterceptor | WebMcpInterceptorFn): () => void {
+    const normalized = normalizeInterceptor(interceptor);
+    this._dynamicInterceptors.update((list) => [...list, normalized]);
+    return () => {
+      this._dynamicInterceptors.update((list) =>
+        list.filter((i) => i !== normalized && (i as any) !== interceptor)
+      );
+    };
   }
 
   /**
@@ -160,7 +199,7 @@ export class WebMcpService {
   }
 
   /**
-   * Execute a tool programmatically (e.g. from UI simulation or direct invocation).
+   * Execute a tool through the interceptor pipeline and underlying model context.
    */
   async executeTool<TResult = unknown>(
     toolName: string,
@@ -171,8 +210,30 @@ export class WebMcpService {
     const logId = 'log-' + Math.random().toString(36).substring(2, 9);
     const timestamp = Date.now();
 
+    const context: WebMcpExecutionContext = {
+      toolName,
+      parameters: { ...parameters },
+      source,
+      metadata: {},
+    };
+
+    const interceptors: WebMcpInterceptor[] = [
+      ...this.diInterceptors.map(normalizeInterceptor),
+      ...this._dynamicInterceptors(),
+    ];
+
+    const dispatch = (index: number, currentContext: WebMcpExecutionContext): Promise<unknown> => {
+      if (index < interceptors.length) {
+        const interceptor = interceptors[index];
+        return interceptor.intercept(currentContext, (nextContext) =>
+          dispatch(index + 1, nextContext)
+        );
+      }
+      return this.context.executeTool(currentContext.toolName, currentContext.parameters);
+    };
+
     try {
-      const result = (await this.context.executeTool(toolName, parameters)) as TResult;
+      const result = (await dispatch(0, context)) as TResult;
       const durationMs = Math.round((performance.now() - startTime) * 100) / 100;
 
       // Prevent duplicate log insertion if window event listener already logged the execution
@@ -183,7 +244,7 @@ export class WebMcpService {
         this.addLog({
           id: logId,
           toolName,
-          parameters,
+          parameters: context.parameters,
           result,
           timestamp,
           durationMs,
@@ -197,7 +258,7 @@ export class WebMcpService {
           'color: #06b6d4; font-weight: bold;',
           'color: #10b981; font-weight: bold;',
           'color: #94a3b8;',
-          { parameters, result }
+          { parameters: context.parameters, result }
         );
       }
 
@@ -214,7 +275,7 @@ export class WebMcpService {
         this.addLog({
           id: logId,
           toolName,
-          parameters,
+          parameters: context.parameters,
           error: errorMessage,
           timestamp,
           durationMs,
