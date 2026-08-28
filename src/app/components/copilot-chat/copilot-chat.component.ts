@@ -2,6 +2,7 @@ import {
   Component,
   inject,
   signal,
+  computed,
   ElementRef,
   ViewChild,
   AfterViewChecked,
@@ -10,7 +11,95 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CopilotBridgeService } from '../../services/copilot-bridge.service';
+import { SidebarModuleRegistryService } from '../../services/sidebar-module-registry.service';
 import { PromptChip, ChatMessage } from '../../services/copilot-bridge.types';
+
+export const SHOWROOM_3D_PROMPT_CHIPS: PromptChip[] = [
+  {
+    label: '🏛️ Modern Pavilion',
+    icon: '🏛️',
+    prompt: 'Draw an 8m x 6m floor slab, push-pull 3.2m glass walls, and add 4 marble columns.',
+  },
+  {
+    label: '🏎️ Orbit 90° & Cyan',
+    icon: '🏎️',
+    prompt: 'Orbit camera 90 degrees and set vehicle paint to Neon Cyan (#00f0ff).',
+  },
+  {
+    label: '📸 Take 3D Snapshot',
+    icon: '📸',
+    prompt: 'Take a high-resolution screenshot of the 3D car viewport and describe it.',
+  },
+  {
+    label: '📐 Measure Clearances',
+    icon: '📐',
+    prompt: 'Measure the total floor area and bounding box of all objects in the scene.',
+  },
+  {
+    label: '🛋️ Furnish Office',
+    icon: '🛋️',
+    prompt: 'Place a modern executive desk, ergonomic chair, and ambient lamp at the center.',
+  },
+  {
+    label: '🧱 Apply Materials',
+    icon: '🧱',
+    prompt: 'Apply red brick to the walls, oak wood to the floor, and frosted glass to windows.',
+  },
+  {
+    label: '🏎️ Cyber Showroom',
+    icon: '🏎️',
+    prompt: 'Create a 12m circular showroom platform with brushed metal material and place a cyber car.',
+  },
+];
+
+export const ENTERPRISE_BI_PROMPT_CHIPS: PromptChip[] = [
+  {
+    label: '📊 Q3 Telemetry',
+    icon: '📊',
+    prompt: 'Query enterprise metrics for Finance and Operations over the last 24 hours.',
+  },
+  {
+    label: '🚩 Flagged Audit',
+    icon: '🚩',
+    prompt: 'Filter business data for flagged transactions with amount > 500.',
+  },
+  {
+    label: '📈 Executive KPI',
+    icon: '📈',
+    prompt: 'Calculate executive KPI summary across revenue, latency, and anomaly index.',
+  },
+  {
+    label: '📦 Reorder Stock',
+    icon: '📦',
+    prompt: 'Reorder inventory SKU-AUTO-901 with quantity 25 and critical priority.',
+  },
+];
+
+export const JUDGE_GUIDE_PROMPT_CHIPS: PromptChip[] = [
+  {
+    label: '🏆 Devpost Audit',
+    icon: '🏆',
+    prompt: 'Evaluate WebMCP architectural compliance and run all autonomous verification tests.',
+  },
+  {
+    label: '📋 View Rubric Scorecard',
+    icon: '📋',
+    prompt: 'Show the complete evaluation rubric breakdown for the WebMCP Challenge.',
+  },
+];
+
+export const INSPECTOR_PROMPT_CHIPS: PromptChip[] = [
+  {
+    label: '🔍 Tool Telemetry',
+    icon: '🔍',
+    prompt: 'Inspect live WebMCP tool invocation logs and analyze round-trip latencies.',
+  },
+  {
+    label: '⚡ Protocol History',
+    icon: '⚡',
+    prompt: 'Review the latest execution payload logs and JSON RPC arguments.',
+  },
+];
 
 @Component({
   selector: 'app-copilot-chat',
@@ -29,7 +118,7 @@ import { PromptChip, ChatMessage } from '../../services/copilot-bridge.types';
           </span>
           <div class="text-left">
             <div class="text-xs font-black uppercase tracking-wider text-cyan-700 flex items-center gap-1.5">
-              <span>🤖 Gemini 3.7 Copilot</span>
+              <span>🤖 AI Copilot</span>
               <span class="px-1.5 py-0.2 text-[9px] rounded-full bg-purple-50 text-purple-700 border border-purple-200">AI Loop</span>
             </div>
             <div class="text-[11px] text-slate-600 font-mono">Autonomous WebMCP Agent</div>
@@ -47,7 +136,7 @@ import { PromptChip, ChatMessage } from '../../services/copilot-bridge.types';
         <div class="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/95 backdrop-blur-xl border border-cyan-500/40 shadow-2xl shadow-slate-900/10 text-xs text-slate-800">
           <div class="flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span class="font-bold text-slate-800">Gemini 3.7 Copilot (Minimized)</span>
+            <span class="font-bold text-slate-800">AI Copilot (Minimized)</span>
             <span class="text-slate-500 font-mono text-[10px]">[{{ bridge.messages().length }} msgs]</span>
           </div>
           <div class="flex items-center gap-1.5 ml-2">
@@ -87,7 +176,7 @@ import { PromptChip, ChatMessage } from '../../services/copilot-bridge.types';
             <div>
               <div class="flex items-center gap-2">
                 <h3 class="text-xs font-extrabold text-slate-900 tracking-wide">
-                  Gemini 3.7 Copilot
+                  AI Copilot
                 </h3>
                 <span class="px-1.5 py-0.5 text-[9px] font-mono uppercase font-bold rounded bg-cyan-50 text-cyan-700 border border-cyan-200">
                   Bridge Proxy
@@ -99,18 +188,8 @@ import { PromptChip, ChatMessage } from '../../services/copilot-bridge.types';
             </div>
           </div>
 
-          <!-- Controls: Model Selector & Window Buttons -->
+          <!-- Controls: Window Buttons -->
           <div class="flex items-center gap-1.5">
-            <!-- Model Selector Dropdown -->
-            <select
-              [ngModel]="bridge.selectedModel()"
-              (ngModelChange)="onModelChange($event)"
-              class="bg-white border border-slate-200 text-[11px] font-mono text-cyan-800 rounded-lg px-2 py-1 focus:outline-none focus:border-cyan-500 cursor-pointer max-w-[130px] truncate shadow-xs">
-              @for (m of bridge.availableModels(); track m.id) {
-                <option [value]="m.id">{{ m.id }}</option>
-              }
-            </select>
-
             <!-- Clear Chat -->
             <button
               (click)="clearChat()"
@@ -147,7 +226,7 @@ import { PromptChip, ChatMessage } from '../../services/copilot-bridge.types';
         <div class="px-4 py-1.5 bg-slate-100/80 border-b border-slate-200 flex items-center justify-between text-[10px] font-mono text-slate-600">
           <div class="flex items-center gap-1.5">
             <span class="w-2 h-2 rounded-full" [ngClass]="bridge.isGenerating() ? 'bg-amber-500 animate-ping' : 'bg-emerald-500'"></span>
-            <span>Status: {{ bridge.isGenerating() ? 'Thinking & Executing...' : 'Agent Idle / Listening' }}</span>
+            <span>Status: {{ bridge.isGenerating() ? 'Thinking & Executing...' : 'Agent Idle / Ready' }}</span>
           </div>
           <div class="text-slate-500">
             Max Recursion: 5 Turns
@@ -168,7 +247,7 @@ import { PromptChip, ChatMessage } from '../../services/copilot-bridge.types';
                 </div>
                 <h4 class="text-sm font-bold text-slate-900">Multimodal Autonomous Copilot</h4>
                 <p class="text-xs text-slate-600 leading-relaxed max-w-sm mx-auto">
-                  Ask Gemini 3.7 Flash High to control the 3D visualizer, inspect parameters, take screenshots, or fill customizer forms.
+                  Ask AI Copilot to control the 3D visualizer, inspect parameters, take screenshots, or fill customizer forms.
                 </p>
               </div>
 
@@ -177,7 +256,7 @@ import { PromptChip, ChatMessage } from '../../services/copilot-bridge.types';
                   ⚡ Quick Demo Actions:
                 </div>
                 <div class="grid grid-cols-1 gap-2">
-                  @for (chip of promptChips; track chip.label) {
+                  @for (chip of promptChips(); track chip.label) {
                     <button
                       (click)="selectPromptChip(chip)"
                       class="flex items-center gap-2.5 p-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 hover:border-cyan-500/40 text-left transition-all group shadow-xs">
@@ -211,33 +290,46 @@ import { PromptChip, ChatMessage } from '../../services/copilot-bridge.types';
                     <span class="text-[10px] font-mono font-bold text-cyan-100 uppercase">You</span>
                     <span class="text-[9px] font-mono text-cyan-200">{{ formatTimestamp(msg.timestamp) }}</span>
                   </div>
-                  <div class="whitespace-pre-wrap leading-relaxed">{{ msg.content }}</div>
+                  <div class="leading-relaxed" [innerHTML]="formatMessageContent(msg.content)"></div>
                 </div>
               </div>
             }
 
             <!-- Assistant Text Message -->
-            @if (msg.role === 'assistant' && msg.content) {
+            @if (msg.role === 'assistant' && (msg.content || msg.thinking)) {
               <div class="flex justify-start">
                 <div class="max-w-[88%] rounded-2xl rounded-tl-sm bg-white border border-purple-200 p-3 text-xs text-slate-800 shadow-xs">
                   <div class="flex items-center justify-between gap-2 mb-1.5">
                     <div class="flex items-center gap-1.5">
                       <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                      <span class="text-[10px] font-mono font-bold text-purple-700 uppercase">Gemini 3.7</span>
+                      <span class="text-[10px] font-mono font-bold text-purple-700 uppercase">AI Copilot</span>
                     </div>
                     <span class="text-[9px] font-mono text-slate-400">{{ formatTimestamp(msg.timestamp) }}</span>
                   </div>
-                  <div class="whitespace-pre-wrap leading-relaxed text-slate-800">{{ msg.content }}</div>
+
+                  @if (msg.thinking) {
+                    <details class="mb-2 group rounded-xl border border-slate-200/80 bg-slate-50/80 text-[11px] overflow-hidden">
+                      <summary class="px-3 py-1.5 cursor-pointer font-medium text-slate-500 hover:text-slate-800 flex items-center justify-between select-none bg-slate-100/50">
+                        <span>💭 Thought Process</span>
+                        <svg class="w-3 h-3 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </summary>
+                      <div class="p-2.5 text-slate-600 font-mono text-[11px] whitespace-pre-wrap border-t border-slate-200/60 bg-white/60">{{ msg.thinking }}</div>
+                    </details>
+                  }
+
+                  @if (msg.content) {
+                    <div class="leading-relaxed text-slate-800" [innerHTML]="formatMessageContent(msg.content)"></div>
+                  }
                 </div>
               </div>
             }
 
-            <!-- Tool Execution Card / Pill -->
+            <!-- Tool Execution Card / Pill Accordion -->
             @if (msg.role === 'tool') {
-              <div class="p-2.5 rounded-xl bg-white/90 border border-slate-200 text-xs space-y-2 text-slate-800 shadow-xs">
-                
-                <!-- Status Pill Header -->
-                <div class="flex items-center justify-between gap-2">
+              <details class="group rounded-xl border border-slate-200 bg-white/90 text-xs shadow-xs overflow-hidden">
+                <summary class="px-3 py-2 cursor-pointer font-medium text-slate-700 hover:bg-slate-50/80 flex items-center justify-between select-none list-none [&::-webkit-details-marker]:hidden">
                   <div class="flex items-center gap-2">
                     @if (msg.toolExecution?.status === 'success') {
                       <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
@@ -261,29 +353,47 @@ import { PromptChip, ChatMessage } from '../../services/copilot-bridge.types';
                     </span>
                   </div>
 
-                  <span class="text-[9px] font-mono text-slate-500">Tool Result</span>
-                </div>
-
-                <!-- Multimodal Base64 Image Preview (if take_screenshot) -->
-                @if (msg.imageUrl) {
-                  <div class="rounded-lg overflow-hidden border border-cyan-300/80 relative group bg-slate-900">
-                    <img
-                      [src]="msg.imageUrl"
-                      alt="3D Viewport Capture"
-                      class="w-full h-36 object-contain cursor-pointer hover:opacity-90 transition-opacity"
-                      (click)="openImageModal(msg.imageUrl)" />
-                    <button
-                      (click)="openImageModal(msg.imageUrl)"
-                      class="absolute bottom-2 right-2 px-2 py-1 rounded bg-white/90 hover:bg-cyan-50 text-[10px] font-mono text-cyan-800 border border-cyan-300 backdrop-blur-md flex items-center gap-1 shadow-xs">
-                      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                      </svg>
-                      <span>Expand</span>
-                    </button>
+                  <div class="flex items-center gap-2">
+                    <span class="text-[9px] font-mono text-slate-500">Tool Result</span>
+                    <svg class="w-3 h-3 text-slate-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
                   </div>
-                }
+                </summary>
 
-              </div>
+                <div class="p-3 border-t border-slate-100 bg-slate-50/50 space-y-2">
+                  <!-- Multimodal Base64 Image Preview (if take_screenshot) -->
+                  @if (msg.imageUrl) {
+                    <div class="rounded-lg overflow-hidden border border-cyan-300/80 relative group bg-slate-900">
+                      <img
+                        [src]="msg.imageUrl"
+                        alt="3D Viewport Capture"
+                        class="w-full h-36 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                        (click)="openImageModal(msg.imageUrl)" />
+                      <button
+                        (click)="openImageModal(msg.imageUrl)"
+                        class="absolute bottom-2 right-2 px-2 py-1 rounded bg-white/90 hover:bg-cyan-50 text-[10px] font-mono text-cyan-800 border border-cyan-300 backdrop-blur-md flex items-center gap-1 shadow-xs">
+                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                        </svg>
+                        <span>Expand</span>
+                      </button>
+                    </div>
+                  }
+
+                  @if (msg.toolExecution?.errorMessage) {
+                    <div class="p-2 rounded bg-rose-50 border border-rose-200 text-rose-800 text-[11px] font-mono">
+                      {{ msg.toolExecution?.errorMessage }}
+                    </div>
+                  }
+
+                  @if (msg.content) {
+                    <div class="p-2 rounded bg-white border border-slate-200 font-mono text-[10px] text-slate-600 max-h-36 overflow-y-auto whitespace-pre-wrap">
+                      {{ msg.content }}
+                    </div>
+                  }
+                </div>
+              </details>
             }
 
           }
@@ -297,7 +407,7 @@ import { PromptChip, ChatMessage } from '../../services/copilot-bridge.types';
                 <span class="w-2 h-2 rounded-full bg-cyan-600 animate-bounce [animation-delay:0.4s]"></span>
               </div>
               <span class="font-mono text-[11px]">
-                {{ bridge.activeToolExecution() ? 'Executing ' + bridge.activeToolExecution()?.toolName + '...' : 'Gemini 3.7 Flash High reasoning...' }}
+                {{ bridge.activeToolExecution() ? 'Executing ' + bridge.activeToolExecution()?.toolName + '...' : 'Thinking & executing...' }}
               </span>
             </div>
           }
@@ -307,7 +417,7 @@ import { PromptChip, ChatMessage } from '../../services/copilot-bridge.types';
         <!-- Quick Action Prompt Chips Bar (when conversation active) -->
         @if (bridge.messages().length > 0) {
           <div class="px-3 py-1.5 bg-slate-100/80 border-t border-slate-200 overflow-x-auto flex items-center gap-1.5 no-scrollbar">
-            @for (chip of promptChips; track chip.label) {
+            @for (chip of promptChips(); track chip.label) {
               <button
                 (click)="selectPromptChip(chip)"
                 [disabled]="bridge.isGenerating()"
@@ -411,47 +521,36 @@ import { PromptChip, ChatMessage } from '../../services/copilot-bridge.types';
 })
 export class CopilotChatComponent implements AfterViewChecked {
   readonly bridge: CopilotBridgeService;
+  readonly registry?: SidebarModuleRegistryService;
 
   inputText = '';
   readonly previewImageUrl = signal<string | null>(null);
 
   @ViewChild('scrollContainer') private scrollContainer?: ElementRef<HTMLDivElement>;
 
-  readonly promptChips: PromptChip[] = [
-    {
-      label: 'Take 3D Screenshot',
-      icon: '📸',
-      prompt: 'Take a screenshot of the 3D car viewport and describe the current view.',
-    },
-    {
-      label: 'Orbit 90° & Neon Cyan',
-      icon: '🏎️',
-      prompt: 'Orbit camera 90 degrees and set vehicle paint to Neon Cyan (#00f0ff).',
-    },
-    {
-      label: 'Query BI Performance Metrics',
-      icon: '📈',
-      prompt: 'Query enterprise metrics for the performance category and summarize system latency.',
-    },
-    {
-      label: 'Filter Flagged Transactions',
-      icon: '🚨',
-      prompt: 'Filter business data to show flagged anomalous transactions with amount greater than 500.',
-    },
-    {
-      label: 'Calculate KPI & Export CSV',
-      icon: '📑',
-      prompt: 'Calculate KPI summary for revenue_ytd and active_nodes, then trigger an analytics export in CSV format.',
-    },
-    {
-      label: 'Boost Turbo & Pro Customizer',
-      icon: '⚡',
-      prompt: 'Boost turbo, switch to sport rims, autofill pro customizer, and build report.',
-    },
-  ];
+  readonly promptChips = computed<PromptChip[]>(() => {
+    const activeView = this.registry?.activeView();
+    const viewId = activeView?.id || 'view-3d-showroom';
+    const route = activeView?.route || '/3d-showroom';
 
-  constructor(@Optional() bridge?: CopilotBridgeService) {
+    if (viewId === 'view-enterprise-bi' || route === '/enterprise-bi') {
+      return ENTERPRISE_BI_PROMPT_CHIPS;
+    }
+    if (viewId === 'view-judge-guide' || route === '/judge-guide') {
+      return JUDGE_GUIDE_PROMPT_CHIPS;
+    }
+    if (viewId === 'view-inspector' || route === '/inspector') {
+      return INSPECTOR_PROMPT_CHIPS;
+    }
+    return SHOWROOM_3D_PROMPT_CHIPS;
+  });
+
+  constructor(
+    @Optional() bridge?: CopilotBridgeService,
+    @Optional() registry?: SidebarModuleRegistryService
+  ) {
     this.bridge = bridge ?? inject(CopilotBridgeService);
+    this.registry = registry ?? inject(SidebarModuleRegistryService, { optional: true }) ?? undefined;
   }
 
   ngAfterViewChecked(): void {
@@ -515,4 +614,131 @@ export class CopilotChatComponent implements AfterViewChecked {
     const d = new Date(ts);
     return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
   }
+
+  /**
+   * Safely parses markdown strings into styled HTML, eliminating raw hash headers,
+   * rendering code blocks/inline code, bold/italics, and lists while escaping raw HTML for XSS prevention.
+   */
+  formatMessageContent(content?: string | null): string {
+    return formatMessageContent(content);
+  }
 }
+
+/**
+ * Pure helper function to format markdown content safely for copilot chat.
+ */
+export function formatMessageContent(content?: string | null): string {
+  if (!content) {
+    return '';
+  }
+
+  // 1. Escape raw HTML characters to avoid XSS
+  let text = content
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
+  // 2. Extract and protect fenced code blocks
+  const codeBlocks: string[] = [];
+  text = text.replace(/```(?:([a-zA-Z0-9_-]+)?\r?\n)?([\s\S]*?)```/g, (_match, _lang, code) => {
+    const placeholder = `%%CODE_BLOCK_${codeBlocks.length}%%`;
+    const cleanCode = (code || '').trim();
+    codeBlocks.push(
+      `<pre class="my-2 p-2.5 rounded-lg bg-slate-900 text-slate-100 font-mono text-[11px] overflow-x-auto"><code>${cleanCode}</code></pre>`
+    );
+    return placeholder;
+  });
+
+  // 3. Extract and protect inline code
+  const inlineCodes: string[] = [];
+  text = text.replace(/`([^`\r\n]+)`/g, (_match, code) => {
+    const placeholder = `%%INLINE_CODE_${inlineCodes.length}%%`;
+    inlineCodes.push(
+      `<code class="px-1 py-0.5 rounded bg-slate-100 font-mono text-[11px] text-cyan-800 border border-slate-200">${code}</code>`
+    );
+    return placeholder;
+  });
+
+  // 4. Convert headings (#, ##, ###, ####, #####, ######) completely stripping # characters
+  text = text.replace(/^(#{1,6})\s+(.+)$/gm, (_match, _hashes, headerText) => {
+    return `<div class="font-bold text-slate-900 text-xs mt-2 mb-1">${headerText.trim()}</div>`;
+  });
+
+  // 5. Convert bold (**text** or __text__) and italic (*text* or _text_)
+  text = text.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-slate-900">$1</strong>');
+  text = text.replace(/__(.+?)__/g, '<strong class="font-semibold text-slate-900">$1</strong>');
+  text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  text = text.replace(/(?<!\w)_([^_]+)_(?!\w)/g, '<em>$1</em>');
+
+  // 6. Convert bullet lists (- or *) and numbered lists (1. ) into <ul> / <ol>
+  const lines = text.split('\n');
+  const processedLines: string[] = [];
+  let inUl = false;
+  let inOl = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const bulletMatch = line.match(/^\s*[-*]\s+(.+)$/);
+    const numberedMatch = line.match(/^\s*\d+\.\s+(.+)$/);
+
+    if (bulletMatch) {
+      if (inOl) {
+        processedLines.push('</ol>');
+        inOl = false;
+      }
+      if (!inUl) {
+        processedLines.push('<ul class="list-disc list-inside my-1 space-y-0.5 text-slate-800">');
+        inUl = true;
+      }
+      processedLines.push(`<li class="ml-1">${bulletMatch[1]}</li>`);
+    } else if (numberedMatch) {
+      if (inUl) {
+        processedLines.push('</ul>');
+        inUl = false;
+      }
+      if (!inOl) {
+        processedLines.push('<ol class="list-decimal list-inside my-1 space-y-0.5 text-slate-800">');
+        inOl = true;
+      }
+      processedLines.push(`<li class="ml-1">${numberedMatch[1]}</li>`);
+    } else {
+      if (inUl) {
+        processedLines.push('</ul>');
+        inUl = false;
+      }
+      if (inOl) {
+        processedLines.push('</ol>');
+        inOl = false;
+      }
+      processedLines.push(line);
+    }
+  }
+
+  if (inUl) {
+    processedLines.push('</ul>');
+    inUl = false;
+  }
+  if (inOl) {
+    processedLines.push('</ol>');
+    inOl = false;
+  }
+
+  text = processedLines.join('\n');
+
+  // 7. Convert newlines to <br/> and double newlines to paragraph spacing
+  text = text.replace(/\n\n+/g, '<div class="my-1.5"></div>');
+  text = text.replace(/\n/g, '<br/>');
+
+  // Clean up redundant <br/> around block tags
+  text = text
+    .replace(/(<\/ul>|<\/ol>|<\/div>|<\/pre>)(<br\/>)+/g, '$1')
+    .replace(/(<br\/>)+(<ul|<ol|<div|<pre)/g, '$2');
+
+  // 8. Restore protected inline code and code blocks
+  text = text.replace(/%%INLINE_CODE_(\d+)%%/g, (_match, idx) => inlineCodes[Number(idx)] || '');
+  text = text.replace(/%%CODE_BLOCK_(\d+)%%/g, (_match, idx) => codeBlocks[Number(idx)] || '');
+
+  return text;
+}
+

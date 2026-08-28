@@ -62,3 +62,60 @@ export interface BiFilterState {
   minAmount: number;
   timeRange: BiTimeRange;
 }
+
+// --- Multi-Domain Inventory & Sub-Navigation Models ---
+export type BusinessDomain = 'retail' | 'hardware' | 'logistics' | 'pharma' | 'all';
+export type InventoryStockStatus = 'in_stock' | 'low_stock' | 'out_of_stock' | 'reordered';
+export type EnterpriseBiTab = 'analytics' | 'transactions' | 'inventory';
+export type ReorderPriority = 'standard' | 'expedited' | 'critical';
+
+export interface InventorySupplier {
+  id: string;
+  name: string;
+  leadTimeDays: number;
+  rating: number;
+  contactEmail: string;
+}
+
+export interface InventoryItem {
+  id: string;
+  sku: string;
+  name: string;
+  domain: BusinessDomain;
+  stockLevel: number;
+  minThreshold: number;
+  maxCapacity: number;
+  unitPrice: number;
+  currency: string;
+  status: InventoryStockStatus;
+  supplier: InventorySupplier;
+  lastRestocked: string;
+  location: string;
+}
+
+export interface InventoryFilterState {
+  domain: BusinessDomain;
+  status: InventoryStockStatus | 'all';
+  searchTerm: string;
+  lowStockOnly: boolean;
+}
+
+export interface DomainSummaryResult {
+  domain: BusinessDomain;
+  totalSkus: number;
+  totalValuation: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  healthScore: number;
+}
+
+export interface ReorderReceipt {
+  reorderId: string;
+  sku: string;
+  quantity: number;
+  priority: ReorderPriority;
+  supplier: InventorySupplier;
+  estimatedArrival: string;
+  totalCost: number;
+  orderedAt: string;
+}

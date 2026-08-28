@@ -4,13 +4,15 @@
  */
 
 export interface WebMcpPropertySchema {
-  type: 'string' | 'number' | 'integer' | 'boolean' | 'array' | 'object';
+  type?: 'string' | 'number' | 'integer' | 'boolean' | 'array' | 'object' | ('string' | 'number' | 'integer' | 'boolean' | 'array' | 'object')[];
   description?: string;
   enum?: (string | number)[];
   default?: unknown;
   items?: WebMcpPropertySchema;
   properties?: Record<string, WebMcpPropertySchema>;
   required?: string[];
+  oneOf?: WebMcpPropertySchema[];
+  anyOf?: WebMcpPropertySchema[];
 }
 
 export interface WebMcpToolParameterSchema {
@@ -140,3 +142,270 @@ export interface FormActionRunnerResult {
   resultPayload?: unknown;
   message?: string;
 }
+
+/* ==========================================================================
+   3D Creation Studio & WebMCP DCC Co-Pilot Types
+   ========================================================================== */
+
+export type StudioPrimitiveType =
+  | 'box'
+  | 'sphere'
+  | 'cylinder'
+  | 'cone'
+  | 'torus'
+  | 'torus_knot'
+  | 'plane'
+  | 'pedestal'
+  | 'text'
+  | 'light';
+
+export type StudioShadingMode = 'pbr' | 'wireframe' | 'solid' | 'normal';
+
+export type StudioCameraViewPreset = 'perspective' | 'top' | 'front' | 'side' | 'iso';
+
+export type StudioTransformGizmoMode = 'translate' | 'rotate' | 'scale' | 'none';
+
+export interface StudioMaterialConfig {
+  color?: string;
+  metalness?: number;
+  roughness?: number;
+  transmission?: number;
+  emissive?: string;
+  emissiveIntensity?: number;
+  opacity?: number;
+  transparent?: boolean;
+  wireframe?: boolean;
+  clearcoat?: number;
+  ior?: number;
+}
+
+export interface StudioTransformParams {
+  target?: string; // mesh name or 'selected'
+  position?: { x?: number; y?: number; z?: number };
+  rotation?: { x?: number; y?: number; z?: number }; // degrees
+  scale?: { x?: number; y?: number; z?: number } | number;
+  relative?: boolean;
+  durationMs?: number;
+}
+
+export interface StudioCreateObjectParams {
+  type: StudioPrimitiveType;
+  name?: string;
+  position?: { x?: number; y?: number; z?: number };
+  rotation?: { x?: number; y?: number; z?: number }; // degrees
+  scale?: { x?: number; y?: number; z?: number } | number;
+  dimensions?: {
+    width?: number;
+    height?: number;
+    depth?: number;
+    radius?: number;
+    tube?: number;
+    radialSegments?: number;
+    tubularSegments?: number;
+    text?: string;
+    fontSize?: number;
+  };
+  material?: StudioMaterialConfig;
+  lightType?: 'point' | 'directional' | 'spot' | 'ambient';
+  lightIntensity?: number;
+  lightColor?: string;
+}
+
+export interface StudioMaterialParams {
+  target?: string; // mesh name or 'selected'
+  material: StudioMaterialConfig;
+}
+
+export interface StudioHierarchyParams {
+  action: 'select' | 'duplicate' | 'delete' | 'toggle_visibility' | 'lock' | 'clear_custom' | 'reset_scene';
+  target?: string;
+  visible?: boolean;
+  locked?: boolean;
+  offset?: { x?: number; y?: number; z?: number };
+}
+
+export interface StudioViewportParams {
+  shadingMode?: StudioShadingMode;
+  cameraView?: StudioCameraViewPreset;
+  showGrid?: boolean;
+  showShadows?: boolean;
+  gizmoMode?: StudioTransformGizmoMode;
+}
+
+export interface StudioExportParams {
+  format?: 'gltf' | 'glb';
+  target?: 'scene' | 'selected';
+  binary?: boolean;
+  filename?: string;
+}
+
+export interface StudioSceneNode {
+  id: string;
+  name: string;
+  type: string;
+  visible: boolean;
+  locked: boolean;
+  isCustom: boolean;
+  childrenCount?: number;
+  triangleCount?: number;
+  vertexCount?: number;
+  position: { x: number; y: number; z: number };
+  rotation: { x: number; y: number; z: number };
+  scale: { x: number; y: number; z: number };
+  material?: StudioMaterialConfig;
+}
+
+export interface StudioToolResult<T = unknown> {
+  success: boolean;
+  action?: string;
+  target?: string;
+  node?: StudioSceneNode;
+  nodes?: StudioSceneNode[];
+  sceneMetrics?: {
+    triangles: number;
+    vertices: number;
+    meshesCount: number;
+  };
+  data?: T;
+  message: string;
+}
+
+/* ==========================================================================
+   SketchUp-Style Web CAD & WebMCP Co-Design Studio Types
+   ========================================================================== */
+
+export type CadShapeType =
+  | 'rectangle'
+  | 'circle'
+  | 'line'
+  | 'polyline'
+  | 'wall'
+  | 'polygon';
+
+export type CadPlane = 'xz' | 'xy' | 'yz' | 'ground';
+
+export type CadMaterialPreset =
+  | 'concrete'
+  | 'wood_oak'
+  | 'brick_red'
+  | 'glass_frosted'
+  | 'marble_carrara'
+  | 'steel_brushed'
+  | 'tile_subway'
+  | 'gold'
+  | 'neon_cyan'
+  | 'matte_dark'
+  | 'plaster_white';
+
+export type CadComponentType =
+  | 'desk'
+  | 'chair'
+  | 'sofa'
+  | 'door'
+  | 'window'
+  | 'column'
+  | 'pedestal'
+  | 'staircase'
+  | 'tree'
+  | 'car'
+  | 'cyber_car'
+  | 'lamp';
+
+export type CadActiveTool =
+  | 'select'
+  | 'line'
+  | 'rectangle'
+  | 'circle'
+  | 'push_pull'
+  | 'move'
+  | 'rotate'
+  | 'scale'
+  | 'tape_measure'
+  | 'paint_bucket'
+  | 'orbit'
+  | 'pan'
+  | 'zoom';
+
+export type CadMeasurementType =
+  | 'distance'
+  | 'bounding_box'
+  | 'floor_area'
+  | 'volume'
+  | 'clearance';
+
+export interface CadDrawShapeParams {
+  shape: CadShapeType;
+  name?: string;
+  plane?: CadPlane;
+  origin?: { x?: number; y?: number; z?: number };
+  dimensions?: {
+    width?: number;
+    length?: number;
+    radius?: number;
+    wallThickness?: number;
+    height?: number;
+    points?: { x: number; y?: number; z?: number }[];
+  };
+  fill?: boolean;
+  materialPreset?: CadMaterialPreset;
+}
+
+export interface CadPushPullParams {
+  target: string;
+  distance: number;
+  direction?: 'up' | 'down' | 'normal' | 'x' | 'y' | 'z';
+  hollow?: boolean;
+  bevel?: boolean;
+  materialPreset?: CadMaterialPreset;
+}
+
+export interface CadPlaceComponentParams {
+  componentType: CadComponentType;
+  name?: string;
+  position?: { x?: number; y?: number; z?: number };
+  rotationY?: number; // degrees
+  scale?: number | { x?: number; y?: number; z?: number };
+  materialPreset?: CadMaterialPreset;
+}
+
+export interface CadApplyMaterialParams {
+  target: string;
+  materialPreset: CadMaterialPreset;
+  color?: string;
+  roughness?: number;
+  metalness?: number;
+  opacity?: number;
+  transmission?: number;
+  clearcoat?: number;
+  wireframe?: boolean;
+  repeat?: number;
+}
+
+export interface CadMeasureParams {
+  targetA: string;
+  targetB?: string;
+  measurementType: CadMeasurementType;
+}
+
+export interface CadMeasureResultData {
+  measurementType: CadMeasurementType;
+  value?: number;
+  unit?: string;
+  formatted?: string;
+  distance?: number;
+  floorArea?: number;
+  volume?: number;
+  clearance?: number;
+  boundingBox?: {
+    width: number;
+    height: number;
+    depth: number;
+    min: { x: number; y: number; z: number };
+    max: { x: number; y: number; z: number };
+  };
+  targetA: string;
+  targetB?: string;
+  message?: string;
+}
+
+

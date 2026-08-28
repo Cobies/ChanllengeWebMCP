@@ -1,6 +1,7 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, Optional } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { WebMcpService, WebMcpExecutionLog } from '@webmcp/angular';
+import { ViewGuideService } from '../../services/view-guide.service';
 
 @Component({
   selector: 'app-inspector',
@@ -27,8 +28,15 @@ import { WebMcpService, WebMcpExecutionLog } from '@webmcp/angular';
 
         <div class="flex items-center gap-2">
           <button
+            (click)="openGuide()"
+            class="px-2.5 py-1 text-xs rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200/80 transition-colors shadow-2xs font-semibold flex items-center gap-1 cursor-pointer"
+            title="Open Inspector Documentation">
+            <span>📖</span>
+            <span>Guide</span>
+          </button>
+          <button
             (click)="webmcp.clearLogs()"
-            class="px-2.5 py-1 text-xs rounded-lg bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 border border-slate-200 transition-colors shadow-xs">
+            class="px-2.5 py-1 text-xs rounded-lg bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 border border-slate-200 transition-colors shadow-xs cursor-pointer">
             Clear Logs
           </button>
         </div>
@@ -103,9 +111,35 @@ import { WebMcpService, WebMcpExecutionLog } from '@webmcp/angular';
 })
 export class InspectorComponent {
   readonly webmcp: WebMcpService;
+  readonly guideService: ViewGuideService;
 
-  constructor(webmcp?: WebMcpService) {
-    this.webmcp = webmcp || inject(WebMcpService);
+  constructor(
+    @Optional() webmcp?: WebMcpService,
+    @Optional() guideService?: ViewGuideService
+  ) {
+    if (webmcp) {
+      this.webmcp = webmcp;
+    } else {
+      try {
+        this.webmcp = inject(WebMcpService, { optional: true }) || new WebMcpService();
+      } catch {
+        this.webmcp = new WebMcpService();
+      }
+    }
+
+    if (guideService) {
+      this.guideService = guideService;
+    } else {
+      try {
+        this.guideService = inject(ViewGuideService, { optional: true }) || new ViewGuideService();
+      } catch {
+        this.guideService = new ViewGuideService();
+      }
+    }
+  }
+
+  openGuide(): void {
+    this.guideService.openGuide('inspector');
   }
 
   formatTime(timestamp: number): string {

@@ -11,11 +11,14 @@ import {
   ChatCompletionResponse,
   ModelsResponse,
 } from './copilot-bridge.types';
+import { SidebarModuleRegistryService } from './sidebar-module-registry.service';
+import { DEFAULT_SIDEBAR_MODULES } from '../config/sidebar-modules.config';
 
 describe('CopilotBridgeService & Autonomous Agent Loop', () => {
   let service: CopilotBridgeService;
   let mockHttp: any;
   let webmcpService: WebMcpService;
+  let registry: SidebarModuleRegistryService;
 
   beforeEach(() => {
     webmcpService = new WebMcpService({
@@ -23,12 +26,15 @@ describe('CopilotBridgeService & Autonomous Agent Loop', () => {
       logExecutionToConsole: false,
     });
 
+    registry = new SidebarModuleRegistryService(DEFAULT_SIDEBAR_MODULES, webmcpService);
+    registry.setActiveRoute('/3d-showroom');
+
     mockHttp = {
       get: (url: string) => of({ data: DEFAULT_FALLBACK_MODELS }),
       post: (url: string, body: any) => of({ choices: [] }),
     };
 
-    service = new CopilotBridgeService(mockHttp as any, webmcpService);
+    service = new CopilotBridgeService(mockHttp as any, webmcpService, registry);
   });
 
   describe('Model Discovery & Fallback Resilience (Threat Matrix)', () => {
@@ -92,6 +98,53 @@ describe('CopilotBridgeService & Autonomous Agent Loop', () => {
       expect(matched?.function.description).toBe('Performs a test action');
       expect(matched?.function.parameters.properties['target']).toBeDefined();
       expect(matched?.function.parameters.required).toContain('target');
+    });
+  });
+
+  describe('Dynamic Contextual System Prompt Construction (Threat Matrix)', () => {
+    it('should prepend dynamic system message at index 0 with active view and available tools', async () => {
+      registry.setActiveRoute('/enterprise-bi');
+
+      const mockResponse: ChatCompletionResponse = {
+        id: 'chatcmpl-sys',
+        object: 'chat.completion',
+        created: Date.now(),
+        model: 'gemini-3.7-flash-high',
+        choices: [
+          {
+            index: 0,
+            message: { role: 'assistant', content: 'Enterprise BI report ready.' },
+            finish_reason: 'stop',
+          },
+        ],
+      };
+
+      let postedMessages: any[] = [];
+      mockHttp.post = (url: string, body: any) => {
+        postedMessages = body.messages;
+        return of(mockResponse);
+      };
+
+      await service.sendMessage('Summarize Q3 financial health');
+
+      expect(postedMessages.length).toBeGreaterThanOrEqual(2);
+      const systemMsg = postedMessages[0];
+      expect(systemMsg.role).toBe('system');
+      expect(systemMsg.content).toContain('CURRENT WORKSPACE CONTEXT:');
+      expect(systemMsg.content).toContain('Enterprise BI');
+      expect(systemMsg.content).toContain('/enterprise-bi');
+      expect(systemMsg.content).toContain('AVAILABLE WORKSPACE VIEWS CATALOG:');
+      expect(systemMsg.content).toContain('navigate_to_view');
+      expect(systemMsg.content).toContain('OPERATIONAL DIRECTIVES:');
+    });
+
+    it('should generate bounded system prompt under 1.5KB (Threat Matrix)', () => {
+      const prompt = service.buildDynamicSystemPrompt();
+      expect(prompt).toBeDefined();
+      expect(typeof prompt).toBe('string');
+      expect(prompt.length).toBeLessThan(1500); // Strict bounded size < 1.5 KB
+      expect(prompt).toContain('AI Copilot');
+      expect(prompt).toContain('AVAILABLE WORKSPACE VIEWS CATALOG:');
     });
   });
 
@@ -274,6 +327,46 @@ describe('CopilotBridgeService & Autonomous Agent Loop', () => {
       expect(service.isGenerating()).toBe(false);
     });
 
+    it('should format domain-isolated enterprise BI WebMCP tool schemas correctly for OpenAI API', async () => {
+      const biTools: WebMcpToolDefinition[] = [
+        {
+          name: 'query_enterprise_metrics',
+          description: 'Query enterprise metrics and logs',
+          parameters: {
+            type: 'object',
+            properties: {
+              domain: { type: 'string', description: 'Business domain' },
+              department: { type: 'string', description: 'Department' },
+            },
+          },
+          handler: async () => ({ success: true }),
+        },
+        {
+          name: 'calculate_kpi_summary',
+          description: 'Calculate real-time KPIs',
+          parameters: {
+            type: 'object',
+            properties: {
+              domain: { type: 'string' },
+            },
+          },
+          handler: async () => ({ success: true }),
+        },
+      ];
+
+      for (const t of biTools) {
+        await webmcpService.registerTool(t);
+      }
+
+      const openAiTools = service.getOpenAiTools();
+      const queryTool = openAiTools.find((t) => t.function.name === 'query_enterprise_metrics');
+      expect(queryTool).toBeDefined();
+      expect(queryTool?.function.parameters.properties['domain']).toBeDefined();
+
+      const kpiTool = openAiTools.find((t) => t.function.name === 'calculate_kpi_summary');
+      expect(kpiTool).toBeDefined();
+    });
+
     it('should safely recover from malformed JSON tool arguments (Threat Matrix)', async () => {
       const testTool: WebMcpToolDefinition = {
         name: 'safe_tool',
@@ -442,6 +535,76 @@ describe('CopilotBridgeService & Autonomous Agent Loop', () => {
 
       service.closeDrawer();
       expect(service.isOpen()).toBe(false);
+    });
+  });
+
+  describe('Thinking & Reasoning Extraction', () => {
+    it('should extract reasoning from reasoning_content field', () => {
+      const result = service.extractThinkingAndCleanContent({
+        content: 'Final response text',
+        reasoning_content: 'Step 1: Check inputs. Step 2: Validate.',
+      });
+
+      expect(result.cleanContent).toBe('Final response text');
+      expect(result.thinking).toBe('Step 1: Check inputs. Step 2: Validate.');
+    });
+
+    it('should extract thinking from <think>...</think> tags and strip them from content', () => {
+      const result = service.extractThinkingAndCleanContent({
+        content: '<think>Let me formulate the answer.\nAnalyzing parameters...</think>Here is the completed setup.',
+      });
+
+      expect(result.cleanContent).toBe('Here is the completed setup.');
+      expect(result.thinking).toBe('Let me formulate the answer.\nAnalyzing parameters...');
+    });
+
+    it('should extract thinking from <thought>...</thought> tags and strip them from content', () => {
+      const result = service.extractThinkingAndCleanContent({
+        content: '<thought>Evaluating scene hierarchy.</thought>Scene loaded successfully.',
+      });
+
+      expect(result.cleanContent).toBe('Scene loaded successfully.');
+      expect(result.thinking).toBe('Evaluating scene hierarchy.');
+    });
+
+    it('should combine reasoning_content and embedded tags if both present', () => {
+      const result = service.extractThinkingAndCleanContent({
+        content: '<think>Internal tag thought.</think>Result text.',
+        reasoning_content: 'Proxy reasoning content.',
+      });
+
+      expect(result.cleanContent).toBe('Result text.');
+      expect(result.thinking).toContain('Proxy reasoning content.');
+      expect(result.thinking).toContain('Internal tag thought.');
+    });
+
+    it('should set thinking on assistant message in autonomous turn', async () => {
+      const mockResponse: ChatCompletionResponse = {
+        id: 'chatcmpl-think',
+        object: 'chat.completion',
+        created: Date.now(),
+        model: 'gemini-3.7-flash-high',
+        choices: [
+          {
+            index: 0,
+            message: {
+              role: 'assistant',
+              content: '<think>Considering vehicle transformation</think>Vehicle colored red.',
+            },
+            finish_reason: 'stop',
+          },
+        ],
+      };
+
+      mockHttp.post = () => of(mockResponse);
+
+      await service.sendMessage('Color vehicle red');
+
+      const msgs = service.messages();
+      const assistantMsg = msgs.find((m) => m.role === 'assistant');
+      expect(assistantMsg).toBeDefined();
+      expect(assistantMsg?.content).toBe('Vehicle colored red.');
+      expect(assistantMsg?.thinking).toBe('Considering vehicle transformation');
     });
   });
 });

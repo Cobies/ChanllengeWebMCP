@@ -90,7 +90,7 @@ export class WebMcpService {
         if (detail && detail.toolName) {
           // If not already logged from executeTool
           const existing = this._logs().find(
-            (l) => l.toolName === detail.toolName && Math.abs(l.timestamp - Date.now()) < 50
+            (l) => l.toolName === detail.toolName && Math.abs(l.timestamp - Date.now()) < 500
           );
           if (!existing) {
             this.addLog({
@@ -175,15 +175,21 @@ export class WebMcpService {
       const result = (await this.context.executeTool(toolName, parameters)) as TResult;
       const durationMs = Math.round((performance.now() - startTime) * 100) / 100;
 
-      this.addLog({
-        id: logId,
-        toolName,
-        parameters,
-        result,
-        timestamp,
-        durationMs,
-        source,
-      });
+      // Prevent duplicate log insertion if window event listener already logged the execution
+      const existing = this._logs().find(
+        (l) => l.toolName === toolName && Math.abs(l.timestamp - timestamp) < 500
+      );
+      if (!existing) {
+        this.addLog({
+          id: logId,
+          toolName,
+          parameters,
+          result,
+          timestamp,
+          durationMs,
+          source,
+        });
+      }
 
       if (this.config.logExecutionToConsole) {
         console.log(
@@ -200,15 +206,21 @@ export class WebMcpService {
       const durationMs = Math.round((performance.now() - startTime) * 100) / 100;
       const errorMessage = err instanceof Error ? err.message : String(err);
 
-      this.addLog({
-        id: logId,
-        toolName,
-        parameters,
-        error: errorMessage,
-        timestamp,
-        durationMs,
-        source,
-      });
+      // Prevent duplicate log insertion if window event listener already logged the execution
+      const existing = this._logs().find(
+        (l) => l.toolName === toolName && Math.abs(l.timestamp - timestamp) < 500
+      );
+      if (!existing) {
+        this.addLog({
+          id: logId,
+          toolName,
+          parameters,
+          error: errorMessage,
+          timestamp,
+          durationMs,
+          source,
+        });
+      }
 
       if (this.config.logExecutionToConsole) {
         console.error(

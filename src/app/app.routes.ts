@@ -21,6 +21,14 @@ export const routes: Routes = [
     title: 'WebMCP Enterprise BI - Data Intelligence',
   },
   {
+    path: 'inspector',
+    loadComponent: () =>
+      import('./components/inspector/inspector.component').then(
+        (m) => m.InspectorComponent
+      ),
+    title: 'WebMCP Inspector - Telemetry & Protocol Logs',
+  },
+  {
     path: 'judge-guide',
     loadComponent: () =>
       import('./components/judge-guide/judge-guide.component').then(

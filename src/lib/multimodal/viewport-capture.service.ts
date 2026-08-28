@@ -21,7 +21,7 @@ export class WebmcpViewportCaptureService {
   /**
    * Register the `take_screenshot` tool with the WebMCP service.
    */
-  private registerScreenshotTool(): void {
+  public registerScreenshotTool(): void {
     const screenshotTool: WebMcpToolDefinition<TakeScreenshotParams, TakeScreenshotResult> = {
       name: 'take_screenshot',
       description:
@@ -52,6 +52,13 @@ export class WebmcpViewportCaptureService {
     };
 
     this.webmcp.registerTool(screenshotTool);
+  }
+
+  /**
+   * Unregister the `take_screenshot` tool from the WebMCP service.
+   */
+  public unregisterScreenshotTool(): void {
+    this.webmcp.unregisterTool('take_screenshot');
   }
 
   /**

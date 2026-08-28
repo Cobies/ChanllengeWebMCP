@@ -57,6 +57,7 @@ export interface ChatMessage {
   toolExecution?: ToolExecutionMeta;
   timestamp: number;
   execution_time_ms?: number;
+  thinking?: string;
 }
 
 export interface ChatCompletionRequest {
@@ -83,6 +84,7 @@ export interface ChatCompletionResponse {
       role: 'assistant';
       content?: string | null;
       tool_calls?: ToolCallPayload[];
+      reasoning_content?: string;
     };
     finish_reason: 'stop' | 'tool_calls' | 'length' | string;
   }>;

@@ -8,6 +8,15 @@ import {
   MetricCategory,
   BiTimeRange,
   ExportFormat,
+  BusinessDomain,
+  InventoryStockStatus,
+  EnterpriseBiTab,
+  ReorderPriority,
+  InventorySupplier,
+  InventoryItem,
+  InventoryFilterState,
+  DomainSummaryResult,
+  ReorderReceipt,
 } from '../models/enterprise-bi.types';
 
 @Injectable({
@@ -347,6 +356,362 @@ export class EnterpriseDataService {
 
   readonly exportAuditLog = signal<ExportAuditReport[]>([]);
 
+  // --- Multi-Domain Inventory State Signals ---
+  readonly inventory = signal<InventoryItem[]>([
+    // Retail Domain (4 SKUs)
+    {
+      id: 'INV-RET-101',
+      sku: 'RET-101',
+      name: 'Quantum Wireless POS Terminal',
+      domain: 'retail',
+      stockLevel: 85,
+      minThreshold: 20,
+      maxCapacity: 200,
+      unitPrice: 299.99,
+      currency: 'USD',
+      status: 'in_stock',
+      supplier: {
+        id: 'SUP-RET-01',
+        name: 'OmniRetail Systems',
+        leadTimeDays: 3,
+        rating: 4.8,
+        contactEmail: 'supply@omniretail.io',
+      },
+      lastRestocked: '2026-08-20T10:00:00Z',
+      location: 'Warehouse North - Section A1',
+    },
+    {
+      id: 'INV-RET-102',
+      sku: 'RET-102',
+      name: 'Smart Shelf RFID Beacon',
+      domain: 'retail',
+      stockLevel: 14,
+      minThreshold: 25,
+      maxCapacity: 150,
+      unitPrice: 45.5,
+      currency: 'USD',
+      status: 'low_stock',
+      supplier: {
+        id: 'SUP-RET-02',
+        name: 'IoT Retail Solutions',
+        leadTimeDays: 5,
+        rating: 4.6,
+        contactEmail: 'orders@iotretailsol.com',
+      },
+      lastRestocked: '2026-08-15T08:30:00Z',
+      location: 'Warehouse North - Section A3',
+    },
+    {
+      id: 'INV-RET-103',
+      sku: 'RET-103',
+      name: 'UltraHD Electronic Shelf Label',
+      domain: 'retail',
+      stockLevel: 0,
+      minThreshold: 50,
+      maxCapacity: 500,
+      unitPrice: 18.0,
+      currency: 'USD',
+      status: 'out_of_stock',
+      supplier: {
+        id: 'SUP-RET-01',
+        name: 'OmniRetail Systems',
+        leadTimeDays: 3,
+        rating: 4.8,
+        contactEmail: 'supply@omniretail.io',
+      },
+      lastRestocked: '2026-08-01T14:00:00Z',
+      location: 'Warehouse North - Section A5',
+    },
+    {
+      id: 'INV-RET-104',
+      sku: 'RET-104',
+      name: 'Self-Checkout Optical Scanner',
+      domain: 'retail',
+      stockLevel: 42,
+      minThreshold: 15,
+      maxCapacity: 80,
+      unitPrice: 850.0,
+      currency: 'USD',
+      status: 'in_stock',
+      supplier: {
+        id: 'SUP-RET-03',
+        name: 'AcuScan Robotics',
+        leadTimeDays: 7,
+        rating: 4.9,
+        contactEmail: 'enterprise@acuscan.tech',
+      },
+      lastRestocked: '2026-08-22T11:15:00Z',
+      location: 'Warehouse North - Section B2',
+    },
+
+    // Hardware Domain (4 SKUs)
+    {
+      id: 'INV-HDW-201',
+      sku: 'HDW-201',
+      name: 'Edge AI Accelerators (PCIe)',
+      domain: 'hardware',
+      stockLevel: 60,
+      minThreshold: 15,
+      maxCapacity: 120,
+      unitPrice: 1250.0,
+      currency: 'USD',
+      status: 'in_stock',
+      supplier: {
+        id: 'SUP-HDW-01',
+        name: 'NeuralSilicon Labs',
+        leadTimeDays: 10,
+        rating: 4.9,
+        contactEmail: 'chips@neuralsilicon.ai',
+      },
+      lastRestocked: '2026-08-18T09:00:00Z',
+      location: 'Facility Tech-Bay 4',
+    },
+    {
+      id: 'INV-HDW-202',
+      sku: 'HDW-202',
+      name: 'Industrial LiDAR Sensor Array',
+      domain: 'hardware',
+      stockLevel: 8,
+      minThreshold: 12,
+      maxCapacity: 50,
+      unitPrice: 2400.0,
+      currency: 'USD',
+      status: 'low_stock',
+      supplier: {
+        id: 'SUP-HDW-02',
+        name: 'PrecisionPhotonics Inc',
+        leadTimeDays: 14,
+        rating: 4.7,
+        contactEmail: 'sales@pphotonics.com',
+      },
+      lastRestocked: '2026-08-10T16:45:00Z',
+      location: 'Facility Tech-Bay 2',
+    },
+    {
+      id: 'INV-HDW-203',
+      sku: 'HDW-203',
+      name: 'ARM64 Server Blade Unit',
+      domain: 'hardware',
+      stockLevel: 25,
+      minThreshold: 10,
+      maxCapacity: 60,
+      unitPrice: 3800.0,
+      currency: 'USD',
+      status: 'in_stock',
+      supplier: {
+        id: 'SUP-HDW-03',
+        name: 'MegaCompute Hardware',
+        leadTimeDays: 8,
+        rating: 4.8,
+        contactEmail: 'enterprise@megacompute.com',
+      },
+      lastRestocked: '2026-08-24T12:00:00Z',
+      location: 'Facility Server-Row C',
+    },
+    {
+      id: 'INV-HDW-204',
+      sku: 'HDW-204',
+      name: 'Redundant 2000W Platinum PSU',
+      domain: 'hardware',
+      stockLevel: 0,
+      minThreshold: 10,
+      maxCapacity: 80,
+      unitPrice: 420.0,
+      currency: 'USD',
+      status: 'out_of_stock',
+      supplier: {
+        id: 'SUP-HDW-03',
+        name: 'MegaCompute Hardware',
+        leadTimeDays: 4,
+        rating: 4.8,
+        contactEmail: 'enterprise@megacompute.com',
+      },
+      lastRestocked: '2026-07-28T14:30:00Z',
+      location: 'Facility Power-Rack 1',
+    },
+
+    // Logistics Domain (4 SKUs)
+    {
+      id: 'INV-LOG-301',
+      sku: 'LOG-301',
+      name: 'Autonomous Pallet AGV Rover',
+      domain: 'logistics',
+      stockLevel: 12,
+      minThreshold: 5,
+      maxCapacity: 25,
+      unitPrice: 15500.0,
+      currency: 'USD',
+      status: 'in_stock',
+      supplier: {
+        id: 'SUP-LOG-01',
+        name: 'RoboFleet Global',
+        leadTimeDays: 21,
+        rating: 4.9,
+        contactEmail: 'dispatch@robofleet.io',
+      },
+      lastRestocked: '2026-08-05T09:20:00Z',
+      location: 'Logistics Hub Central',
+    },
+    {
+      id: 'INV-LOG-302',
+      sku: 'LOG-302',
+      name: 'Rugged GPS Telematics Gateway',
+      domain: 'logistics',
+      stockLevel: 110,
+      minThreshold: 30,
+      maxCapacity: 300,
+      unitPrice: 185.0,
+      currency: 'USD',
+      status: 'in_stock',
+      supplier: {
+        id: 'SUP-LOG-02',
+        name: 'TrackGlobal Tech',
+        leadTimeDays: 6,
+        rating: 4.7,
+        contactEmail: 'support@trackglobal.com',
+      },
+      lastRestocked: '2026-08-21T13:40:00Z',
+      location: 'Logistics Depot 3',
+    },
+    {
+      id: 'INV-LOG-303',
+      sku: 'LOG-303',
+      name: 'Thermal Cargo Temperature Logger',
+      domain: 'logistics',
+      stockLevel: 15,
+      minThreshold: 40,
+      maxCapacity: 200,
+      unitPrice: 95.0,
+      currency: 'USD',
+      status: 'low_stock',
+      supplier: {
+        id: 'SUP-LOG-02',
+        name: 'TrackGlobal Tech',
+        leadTimeDays: 5,
+        rating: 4.7,
+        contactEmail: 'support@trackglobal.com',
+      },
+      lastRestocked: '2026-08-12T10:10:00Z',
+      location: 'Logistics Cold-Chain B',
+    },
+    {
+      id: 'INV-LOG-304',
+      sku: 'LOG-304',
+      name: 'High-Speed Barcode Sorter Arm',
+      domain: 'logistics',
+      stockLevel: 6,
+      minThreshold: 4,
+      maxCapacity: 15,
+      unitPrice: 8900.0,
+      currency: 'USD',
+      status: 'in_stock',
+      supplier: {
+        id: 'SUP-LOG-01',
+        name: 'RoboFleet Global',
+        leadTimeDays: 18,
+        rating: 4.9,
+        contactEmail: 'dispatch@robofleet.io',
+      },
+      lastRestocked: '2026-08-16T15:00:00Z',
+      location: 'Logistics Sorting Wing',
+    },
+
+    // Pharma Domain (4 SKUs)
+    {
+      id: 'INV-PHA-401',
+      sku: 'PHA-401',
+      name: 'Cryogenic Specimen Vial (100pk)',
+      domain: 'pharma',
+      stockLevel: 240,
+      minThreshold: 80,
+      maxCapacity: 600,
+      unitPrice: 120.0,
+      currency: 'USD',
+      status: 'in_stock',
+      supplier: {
+        id: 'SUP-PHA-01',
+        name: 'BioCare Instruments',
+        leadTimeDays: 4,
+        rating: 4.95,
+        contactEmail: 'orders@biocare-pharma.com',
+      },
+      lastRestocked: '2026-08-25T08:00:00Z',
+      location: 'Pharma Lab Vault 1',
+    },
+    {
+      id: 'INV-PHA-402',
+      sku: 'PHA-402',
+      name: 'Digital Precision Micro-Pipette',
+      domain: 'pharma',
+      stockLevel: 18,
+      minThreshold: 20,
+      maxCapacity: 80,
+      unitPrice: 450.0,
+      currency: 'USD',
+      status: 'low_stock',
+      supplier: {
+        id: 'SUP-PHA-01',
+        name: 'BioCare Instruments',
+        leadTimeDays: 6,
+        rating: 4.95,
+        contactEmail: 'orders@biocare-pharma.com',
+      },
+      lastRestocked: '2026-08-11T14:15:00Z',
+      location: 'Pharma Cleanroom A',
+    },
+    {
+      id: 'INV-PHA-403',
+      sku: 'PHA-403',
+      name: 'Smart Cold-Chain Vaccine Safe',
+      domain: 'pharma',
+      stockLevel: 5,
+      minThreshold: 3,
+      maxCapacity: 12,
+      unitPrice: 14200.0,
+      currency: 'USD',
+      status: 'in_stock',
+      supplier: {
+        id: 'SUP-PHA-02',
+        name: 'MedTemp Vaults',
+        leadTimeDays: 12,
+        rating: 4.85,
+        contactEmail: 'sales@medtemp.eu',
+      },
+      lastRestocked: '2026-08-08T11:30:00Z',
+      location: 'Pharma Lab Vault 2',
+    },
+    {
+      id: 'INV-PHA-404',
+      sku: 'PHA-404',
+      name: 'Centrifuge Rotors Titanium T8',
+      domain: 'pharma',
+      stockLevel: 0,
+      minThreshold: 5,
+      maxCapacity: 20,
+      unitPrice: 3100.0,
+      currency: 'USD',
+      status: 'out_of_stock',
+      supplier: {
+        id: 'SUP-PHA-02',
+        name: 'MedTemp Vaults',
+        leadTimeDays: 9,
+        rating: 4.85,
+        contactEmail: 'sales@medtemp.eu',
+      },
+      lastRestocked: '2026-07-20T09:45:00Z',
+      location: 'Pharma Prep Room C',
+    },
+  ]);
+
+  readonly inventoryFilter = signal<InventoryFilterState>({
+    domain: 'all',
+    status: 'all',
+    searchTerm: '',
+    lowStockOnly: false,
+  });
+
+  readonly reorderLog = signal<ReorderReceipt[]>([]);
+
   // --- Computed Reactive Signals ---
   readonly filteredTransactions = computed(() => {
     const list = this.transactions();
@@ -435,6 +800,97 @@ export class EnterpriseDataService {
     return Array.from(set).sort();
   });
 
+  readonly filteredInventory = computed(() => {
+    const list = this.inventory();
+    const filter = this.inventoryFilter();
+    const search = filter.searchTerm.trim().toLowerCase();
+
+    return list.filter((item) => {
+      // Domain filter
+      if (filter.domain !== 'all' && item.domain !== filter.domain) {
+        return false;
+      }
+      // Status filter
+      if (filter.status !== 'all' && item.status !== filter.status) {
+        return false;
+      }
+      // Low stock only filter
+      if (
+        filter.lowStockOnly &&
+        item.stockLevel > item.minThreshold &&
+        item.status !== 'low_stock' &&
+        item.status !== 'out_of_stock'
+      ) {
+        return false;
+      }
+      // Search term filter
+      if (search) {
+        const matchesSku = item.sku.toLowerCase().includes(search);
+        const matchesName = item.name.toLowerCase().includes(search);
+        const matchesLoc = item.location.toLowerCase().includes(search);
+        const matchesSup = item.supplier.name.toLowerCase().includes(search);
+        if (!matchesSku && !matchesName && !matchesLoc && !matchesSup) {
+          return false;
+        }
+      }
+      return true;
+    });
+  });
+
+  readonly domainSummaries = computed<DomainSummaryResult[]>(() => {
+    const domains: Exclude<BusinessDomain, 'all'>[] = ['retail', 'hardware', 'logistics', 'pharma'];
+    const items = this.inventory();
+
+    return domains.map((domain) => {
+      const domainItems = items.filter((item) => item.domain === domain);
+      const totalSkus = domainItems.length;
+      const totalValuation =
+        Math.round(
+          domainItems.reduce((acc, item) => acc + item.stockLevel * item.unitPrice, 0) * 100
+        ) / 100;
+      const lowStockCount = domainItems.filter(
+        (item) => item.status === 'low_stock' || (item.stockLevel <= item.minThreshold && item.stockLevel > 0)
+      ).length;
+      const outOfStockCount = domainItems.filter(
+        (item) => item.status === 'out_of_stock' || item.stockLevel === 0
+      ).length;
+      const healthyCount = domainItems.filter(
+        (item) => item.status === 'in_stock' && item.stockLevel > item.minThreshold
+      ).length;
+      const healthScore =
+        totalSkus === 0
+          ? 100
+          : Math.max(0, Math.min(100, Math.round((healthyCount / totalSkus) * 100)));
+
+      return {
+        domain,
+        totalSkus,
+        totalValuation,
+        lowStockCount,
+        outOfStockCount,
+        healthScore,
+      };
+    });
+  });
+
+  readonly totalInventoryValuation = computed(() => {
+    const items = this.inventory();
+    return (
+      Math.round(
+        items.reduce((acc, item) => acc + item.stockLevel * item.unitPrice, 0) * 100
+      ) / 100
+    );
+  });
+
+  readonly lowStockAlerts = computed(() => {
+    return this.inventory().filter(
+      (item) =>
+        item.stockLevel <= item.minThreshold ||
+        item.status === 'low_stock' ||
+        item.status === 'out_of_stock'
+    );
+  });
+
   // --- Actions & Methods ---
   updateFilter(partial: Partial<BiFilterState>): void {
     this.filterState.update((current) => ({
@@ -510,5 +966,184 @@ export class EnterpriseDataService {
 
     this.exportAuditLog.update((logs) => [report, ...logs.slice(0, 19)]);
     return report;
+  }
+
+  // --- Multi-Domain Inventory Operations ---
+  updateInventoryFilter(partial: Partial<InventoryFilterState>): void {
+    this.inventoryFilter.update((current) => ({
+      ...current,
+      ...partial,
+    }));
+  }
+
+  resetInventoryFilter(): void {
+    this.inventoryFilter.set({
+      domain: 'all',
+      status: 'all',
+      searchTerm: '',
+      lowStockOnly: false,
+    });
+  }
+
+  queryInventory(params?: {
+    domain?: BusinessDomain;
+    status?: InventoryStockStatus | 'all';
+    searchTerm?: string;
+    lowStockOnly?: boolean;
+  }): InventoryItem[] {
+    if (!params) {
+      return this.filteredInventory();
+    }
+
+    const domain = params.domain ?? 'all';
+    const status = params.status ?? 'all';
+    const searchTerm = (params.searchTerm ?? '').trim().toLowerCase();
+    const lowStockOnly = params.lowStockOnly ?? false;
+
+    return this.inventory().filter((item) => {
+      if (domain !== 'all' && item.domain !== domain) {
+        return false;
+      }
+      if (status !== 'all' && item.status !== status) {
+        return false;
+      }
+      if (
+        lowStockOnly &&
+        item.stockLevel > item.minThreshold &&
+        item.status !== 'low_stock' &&
+        item.status !== 'out_of_stock'
+      ) {
+        return false;
+      }
+      if (searchTerm) {
+        const matchesSku = item.sku.toLowerCase().includes(searchTerm);
+        const matchesName = item.name.toLowerCase().includes(searchTerm);
+        const matchesLoc = item.location.toLowerCase().includes(searchTerm);
+        const matchesSup = item.supplier.name.toLowerCase().includes(searchTerm);
+        if (!matchesSku && !matchesName && !matchesLoc && !matchesSup) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }
+
+  updateStockLevel(
+    sku: string,
+    delta: number,
+    reason?: string
+  ): {
+    success: boolean;
+    item?: InventoryItem;
+    previousStock?: number;
+    newStock?: number;
+    error?: string;
+  } {
+    const item = this.inventory().find(
+      (i) => i.sku.toLowerCase() === sku.trim().toLowerCase()
+    );
+    if (!item) {
+      return { success: false, error: `SKU '${sku}' not found in inventory catalog.` };
+    }
+
+    const previousStock = item.stockLevel;
+    const newStock = Math.max(0, item.stockLevel + delta);
+
+    let newStatus: InventoryStockStatus;
+    if (newStock === 0) {
+      newStatus = 'out_of_stock';
+    } else if (newStock <= item.minThreshold) {
+      newStatus = 'low_stock';
+    } else {
+      newStatus = 'in_stock';
+    }
+
+    const updatedItem: InventoryItem = {
+      ...item,
+      stockLevel: newStock,
+      status: newStatus,
+      lastRestocked: delta > 0 ? new Date().toISOString() : item.lastRestocked,
+    };
+
+    this.inventory.update((items) =>
+      items.map((i) => (i.id === item.id ? updatedItem : i))
+    );
+
+    return {
+      success: true,
+      item: updatedItem,
+      previousStock,
+      newStock,
+    };
+  }
+
+  reorderItem(
+    sku: string,
+    quantity: number,
+    priority: ReorderPriority = 'standard'
+  ): {
+    success: boolean;
+    receipt?: ReorderReceipt;
+    error?: string;
+  } {
+    const item = this.inventory().find(
+      (i) => i.sku.toLowerCase() === sku.trim().toLowerCase()
+    );
+    if (!item) {
+      return { success: false, error: `SKU '${sku}' not found in inventory catalog.` };
+    }
+
+    if (quantity <= 0) {
+      return { success: false, error: 'Reorder quantity must be greater than 0.' };
+    }
+
+    const leadFactor = priority === 'critical' ? 0.33 : priority === 'expedited' ? 0.5 : 1.0;
+    const leadDays = Math.max(1, Math.ceil(item.supplier.leadTimeDays * leadFactor));
+    const arrivalDate = new Date(Date.now() + leadDays * 86400000).toISOString();
+    const costMultiplier = priority === 'critical' ? 1.25 : priority === 'expedited' ? 1.1 : 1.0;
+    const totalCost = Math.round(quantity * item.unitPrice * costMultiplier * 100) / 100;
+    const reorderId = `RO-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+    const receipt: ReorderReceipt = {
+      reorderId,
+      sku: item.sku,
+      quantity,
+      priority,
+      supplier: item.supplier,
+      estimatedArrival: arrivalDate,
+      totalCost,
+      orderedAt: new Date().toISOString(),
+    };
+
+    this.reorderLog.update((logs) => [receipt, ...logs]);
+
+    if (item.status === 'out_of_stock' || item.status === 'low_stock') {
+      this.inventory.update((items) =>
+        items.map((i) => (i.id === item.id ? { ...i, status: 'reordered' as const } : i))
+      );
+    }
+
+    return {
+      success: true,
+      receipt,
+    };
+  }
+
+  getDomainSummary(domain?: BusinessDomain): DomainSummaryResult | DomainSummaryResult[] {
+    const summaries = this.domainSummaries();
+    if (domain && domain !== 'all') {
+      const match = summaries.find((s) => s.domain === domain);
+      return (
+        match || {
+          domain,
+          totalSkus: 0,
+          totalValuation: 0,
+          lowStockCount: 0,
+          outOfStockCount: 0,
+          healthScore: 100,
+        }
+      );
+    }
+    return summaries;
   }
 }

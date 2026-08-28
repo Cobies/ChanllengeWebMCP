@@ -1,24 +1,36 @@
-<div class="min-h-screen bg-[#f6f4ee] flex flex-col text-slate-800">
-  <!-- Top Navigation & Status Bar -->
-  <app-header></app-header>
+<div class="h-screen w-full bg-[#f6f4ee] flex flex-col text-slate-800 relative overflow-hidden">
+  <!-- Modular WebMCP Workspace Sidebar -->
+  <app-sidebar></app-sidebar>
 
-  <!-- Dynamic Routed Content Dashboard -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-    <router-outlet></router-outlet>
-  </main>
+  <!-- Main Content Wrapper adjusted for Sidebar Docking -->
+  <div class="flex-1 flex flex-col transition-all duration-300 min-w-0 h-full overflow-hidden" [ngClass]="mainMarginClass()">
+    <!-- Top Navigation & Status Bar -->
+    <app-header></app-header>
 
-  <!-- Global Footer -->
-  <footer class="border-t border-slate-200/80 bg-white/50 py-6 text-center text-xs text-slate-500 mt-auto">
-    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-      <p class="text-slate-600">
-        Built with Angular 22, Bun, Tailwind CSS v4, Three.js, and W3C WebMCP Standard.
-      </p>
-      <p class="font-mono text-[11px] text-slate-500">
-        MIT Licensed • Open Source
-      </p>
-    </div>
-  </footer>
+    <!-- Dynamic Routed Content Dashboard -->
+    <main [ngClass]="isFullBleedRoute() ? 'flex-1 w-full h-full p-0 m-0 max-w-none flex flex-col min-h-0 overflow-hidden' : 'flex-1 w-full max-w-none px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 py-6 overflow-y-auto'">
+      <router-outlet></router-outlet>
+    </main>
 
-  <!-- Gemini 3.7 Flash High Copilot Floating Drawer & Autonomous Agent Loop -->
+    <!-- Global Footer (Suppressed in Full-Bleed CAD mode) -->
+    @if (!isFullBleedRoute()) {
+      <footer class="border-t border-slate-200/80 bg-white/50 py-6 text-center text-xs text-slate-500 mt-auto shrink-0">
+        <div class="w-full max-w-none px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <p class="text-slate-600">
+            Built with Angular 22, Bun, Tailwind CSS v4, Three.js, and W3C WebMCP Standard.
+          </p>
+          <p class="font-mono text-[11px] text-slate-500">
+            MIT Licensed • Open Source
+          </p>
+        </div>
+      </footer>
+    }
+  </div>
+
+  <!-- Autonomous AI Copilot Floating Drawer & Agent Loop -->
   <app-copilot-chat></app-copilot-chat>
+
+  <!-- Interactive Views & Tools Documentation Modal -->
+  <app-view-guide-modal></app-view-guide-modal>
 </div>
+

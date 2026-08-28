@@ -5,17 +5,17 @@
 [![Bun Runtime](https://img.shields.io/badge/Runtime-Bun-f472b6.svg?logo=bun)](https://bun.sh)
 [![Tailwind CSS v4](https://img.shields.io/badge/Tailwind-v4.0-38bdf8.svg?logo=tailwindcss)](https://tailwindcss.com)
 [![Three.js](https://img.shields.io/badge/Three.js-WebGL-black.svg?logo=threedotjs)](https://threejs.org)
-[![Gemini 3.7 Flash High](https://img.shields.io/badge/AI%20Copilot-Gemini%203.7%20Flash%20High-purple.svg)](https://deepmind.google/technologies/gemini/)
+[![AI Copilot](https://img.shields.io/badge/AI%20Copilot-Multimodal%20Agent-purple.svg)](https://modelcontextprotocol.io)
 [![W3C WebMCP Standard](https://img.shields.io/badge/WebMCP-W3C%20Standard-emerald.svg)](https://modelcontextprotocol.io)
 
-An enterprise Angular 22 toolkit and multi-route interactive showcase for the **W3C WebMCP (Model Context Protocol in the Browser)** standard. Bridges browser AI agents (Chrome AI, ChatGPT in-app browser, Claude, and **built-in Gemini 3.7 Flash High Copilot**) directly with Angular reactive Signals, client-side Three.js WebGL scenes, enterprise business intelligence analytics, declarative template directives, form automation, and multimodal viewport snapshots.
+An enterprise Angular 22 toolkit and multi-route interactive showcase for the **W3C WebMCP (Model Context Protocol in the Browser)** standard. Bridges browser AI agents (Chrome AI, ChatGPT in-app browser, Claude, and **built-in Autonomous AI Copilot**) directly with Angular reactive Signals, client-side Three.js WebGL scenes, enterprise business intelligence analytics, declarative template directives, form automation, and multimodal viewport snapshots.
 
 ---
 
 ## 🌟 Key Features
 
-1. **🤖 Live In-App AI Copilot (Gemini 3.7 Flash High via CPAMC Bridge)**:
-   - Built-in conversational chat drawer powered by Gemini 3.7 Flash High through the CPAMC Secure Bridge Proxy (`https://bridge.cobiesscooby.com/v1`).
+1. **🤖 Live In-App AI Copilot (Autonomous Multi-Modal Agent)**:
+   - Built-in conversational chat drawer powered by an AI Copilot connected through a secure bridge proxy.
    - Dynamic WebMCP-to-OpenAI function schema conversion with autonomous multi-turn recursive execution loop (up to 5 turns).
    - Real-time tool execution status pills (duration latency, status badges) and multimodal WebGL canvas screenshot cards with expand lightbox.
 
@@ -76,7 +76,7 @@ An enterprise Angular 22 toolkit and multi-route interactive showcase for the **
                                              ▼
 ┌─────────────────────────────────────────────────────────────────────────────────────────┐
 │                                 CopilotChatComponent                                    │
-│  - Gemini 3.7 Flash High Autonomous Loop (Max 5 Turns)                                   │
+│  - Autonomous Multimodal Agent Loop (Max 5 Turns)                                       │
 │  - Dynamic WebMCP-to-OpenAI Schema Converter                                            │
 │  - Multimodal WebGL Screenshot Lightbox                                                 │
 │  - Context Token Sanitizer & Malformed JSON Self-Correction                             │
@@ -159,7 +159,7 @@ services:
 
 ## 🧪 Devpost Judge Testing Guide
 
-### Option A: In-App AI Copilot (Gemini 3.7 Flash High) 🤖 [Recommended]
+### Option A: In-App AI Copilot 🤖 [Recommended]
 1. Click the glowing **"🤖 AI Copilot"** button in the top navigation header or the bottom-right launcher.
 2. The Cyberpunk slide-over drawer will expand.
 3. Select any quick action prompt chip or type custom natural language prompts:
@@ -173,7 +173,7 @@ services:
 #### ⚡ Autonomous Form Customizer Scenario:
 > *"Configure the vehicle customizer form: set chassis color to '#00f0ff', select 'Overdrive' drive mode, enable active spoiler, and submit the order."*
 
-4. Watch Gemini 3.7 Flash High reason in real time, invoke browser WebMCP tools autonomously, update the dashboard / 3D viewport, and render rich visual cards!
+4. Watch the AI Copilot reason in real time, invoke browser WebMCP tools autonomously, update the dashboard / 3D viewport, and render rich visual cards!
 
 ---
 
@@ -196,6 +196,37 @@ services:
 
 ---
 
+---
+
+## 📖 Application Views & Functionality Guide
+
+For the full architectural and operational guide, see [docs/VIEWS_GUIDE.md](docs/VIEWS_GUIDE.md).
+
+The application features 4 routed workspaces and a persistent multimodal AI Copilot drawer, fully accessible via the top navigation header, modular sidebar, and the in-app **"📖 View Guide"** interactive modal:
+
+1. **🏎️ 3D Digital Twin Showroom (`/3d-showroom`)**:
+   - **SketchUp Studio & Multi-Panel Modes**: High-precision 3D WebGL Three.js canvas with interactive transform gizmos, raycast selection, 2D rubber-band planar drawing (`cad_draw_shape`), and push-pull volume extrusion (`cad_push_pull`).
+   - **Multimodal Viewport Capture**: Zero-latency client-side rasterization (`take_screenshot`) providing token-optimized base64 image captures for visual agent reasoning.
+   - **Reactive Customizer Form**: Real-time vehicle parameter tuning and bi-directional reactive form synchronization (`form_action_runner`).
+
+2. **📊 Enterprise BI & Data Intelligence (`/enterprise-bi`)**:
+   - **Analytics & Telemetry**: 4 live KPI summary cards, interactive SVG latency charts, and category/time-window filters (`query_enterprise_metrics`).
+   - **Transactions Ledger**: Dynamic status filtering, min-amount querying, and real-time anomaly percentage calculations (`filter_business_data`, `calculate_kpi_summary`).
+   - **Multi-Domain Inventory**: Real-time stock valuation across retail, manufacturing, logistics, and IT domains with autonomous restock reorders (`update_inventory_stock`, `reorder_inventory_item`, `query_inventory`).
+   - **Cryptographic Audit Exports**: Instant SHA-256 verified compliance reports in JSON, CSV, or PDF (`trigger_analytics_export`).
+
+3. **🔍 WebMCP Live Inspector Telemetry (`/inspector`)**:
+   - **Execution & Latency Console**: Real-time stream of all WebMCP tool invocations with duration benchmarks in milliseconds.
+   - **Payload Inspector**: Deep JSON inspection of tool arguments, caller sources (`ai_copilot`, `emulator`, `manual`), and output return contracts.
+
+4. **📋 Devpost Judge & Rubric Guide (`/judge-guide`)**:
+   - **Interactive Evaluation Hub**: 6-part checklist matrix, Chrome Canary native flag setup guide (`chrome://flags/#enable-webmcp-testing`), system architecture blueprints, and automated test harness runner (`judge_rubric_evaluation`, `verify_harness`).
+
+5. **🤖 Multimodal AI Copilot Drawer (`CopilotChatComponent`)**:
+   - **Autonomous Agent Loop**: Multi-turn recursive execution (up to 5 turns) with dynamic route tool reflection and multimodal canvas screenshot previews with lightbox expander.
+
+---
+
 ## 🛠️ WebMCP Tool Specifications
 
 | Tool Name | Route | Parameters | Description |
@@ -204,9 +235,18 @@ services:
 | `filter_business_data` | `/enterprise-bi` | `status?`: string, `minAmount?`: number, `department?`: string | Filters live transactional data table and triggers re-aggregations |
 | `calculate_kpi_summary` | `/enterprise-bi` | `metrics`: string[] | Computes real-time sums, averages, anomaly rates, and breakdowns |
 | `trigger_analytics_export` | `/enterprise-bi` | `format`: 'json'\|'csv'\|'pdf', `filterSummary?`: string | Generates downloadable audit export with SHA-256 integrity hash |
+| `query_inventory` | `/enterprise-bi` | `domain?`: string, `stockStatus?`: string, `searchQuery?`: string | Queries inventory items across retail, manufacturing, logistics, IT domains |
+| `update_inventory_stock` | `/enterprise-bi` | `itemId`: string, `quantityChange`: number, `reason`: string | Adjusts warehouse stock levels and recalculates domain valuations |
+| `reorder_inventory_item` | `/enterprise-bi` | `itemId`: string, `quantity`: number, `priority`: string | Dispatches replenishment purchase orders with priority routing |
+| `filter_inventory_by_domain` | `/enterprise-bi` | `domain`: string | Isolates domain-specific supply chain pipelines |
+| `get_business_domain_summary` | `/enterprise-bi` | `domain?`: string | Returns aggregated metrics across inventory, transactions, and assets |
 | `scene_3d_action` | `/3d-showroom` | `action`: string, `deltaX?`: number, `hexColor?`: string, `meshName?`: string | Directs Three.js WebGL scene animations, rotations, and materials |
 | `take_screenshot` | `/3d-showroom` | `selector?`: string, `format?`: string | Captures client-side WebGL canvas as base64 PNG data URL |
+| `cad_draw_shape` | `/3d-showroom` | `shapeType`: string, `plane`: string, `width?`: number, `height?`: number | Generates parametric 2D planar geometries on specified planes |
+| `cad_push_pull` | `/3d-showroom` | `meshId`: string, `distance`: number, `direction?`: string | Extrudes 2D planar faces into 3D geometric solid volumes |
 | `form_action_runner` | `/3d-showroom` | `formName`: string, `action`: string, `values?`: object | Fills, validates, and submits Angular Reactive Forms |
+| `judge_rubric_evaluation` | `/judge-guide` | *none* | Returns automated compliance score and feature checklist status |
+| `verify_harness` | `/judge-guide` | *none* | Runs end-to-end verification health metrics and test checks |
 
 ---
 
@@ -217,48 +257,41 @@ ChanllengeWebMCP/
 ├── .github/
 │   └── workflows/
 │       └── ci.yml                     # Continuous integration pipeline
-├── projects/
-│   ├── ngx-webmcp/                    # Core Angular 22 Library (@webmcp/angular)
-│   │   ├── src/
-│   │   │   ├── lib/
-│   │   │   │   ├── core/              # WebMcpService, Emulator, Types, Schemas
-│   │   │   │   ├── directives/        # [webmcpTool], [webmcpAction], toWebMcpTool()
-│   │   │   │   ├── multimodal/        # take_screenshot tool & CanvasRasterizer
-│   │   │   │   ├── three/             # scene_3d_action tool, Scene3DActionBus, lerp
-│   │   │   │   └── forms/             # form_action_runner & FormRegistry
-│   │   │   └── public-api.ts          # Public library entrypoint
-│   │   ├── ng-package.json
-│   │   └── package.json
-│   └── showcase/                      # Interactive Demo Application
-│       ├── src/
-│       │   ├── app/
-│       │   │   ├── components/
-│       │   │   │   ├── copilot-chat/   # Cyberpunk Gemini 3.7 Copilot Chat Drawer
-│       │   │   │   ├── enterprise-bi/  # Enterprise BI Dashboard & 4 WebMCP Tools
-│       │   │   │   ├── header/         # Connection status & Navigation Bar
-│       │   │   │   ├── showroom/       # 3D Digital Twin Showroom Shell
-│       │   │   │   ├── visualizer-3d/  # Three.js 3D viewport canvas
-│       │   │   │   ├── customizer-form/# Reactive configuration form
-│       │   │   │   ├── inspector/      # Real-time WebMCP execution console
-│       │   │   │   └── judge-guide/    # Devpost evaluator guide & rubric
-│       │   │   ├── models/
-│       │   │   │   └── enterprise-bi.types.ts # BI data interfaces & contracts
-│       │   │   ├── services/
-│       │   │   │   ├── copilot-bridge.service.ts # CPAMC Bridge & Autonomous Loop
-│       │   │   │   ├── copilot-bridge.types.ts   # OpenAI & Model data contracts
-│       │   │   │   └── enterprise-data.service.ts # Signals-based business dataset
-│       │   │   ├── app.component.ts    # Shell with RouterOutlet & Header
-│       │   │   ├── app.component.html  # Decoupled root template
-│       │   │   ├── app.config.ts       # Router & WebMCP provider config
-│       │   │   └── app.routes.ts       # Standalone lazy routes definition
-│       │   ├── styles.css              # Tailwind CSS v4 directives & theme
-│       │   └── main.ts                 # App bootstrap
-│       └── tsconfig.app.json
-├── angular.json                        # Angular CLI multi-project workspace config
-├── package.json                        # Root workspace scripts & dependencies
-├── tsconfig.json                       # Path aliases for @webmcp/angular
-├── LICENSE                             # MIT License
-└── README.md                           # Documentation & Devpost Submission Guide
+├── docs/
+│   └── VIEWS_GUIDE.md                 # In-depth Application Views & Tools Reference
+├── src/
+│   ├── app/
+│   │   ├── components/
+│   │   │   ├── copilot-chat/          # Autonomous AI Copilot Chat Drawer
+│   │   │   ├── enterprise-bi/         # Enterprise BI Dashboard & 9 WebMCP Tools
+│   │   │   ├── header/                # Connection status, Navigation & View Guide trigger
+│   │   │   ├── inspector/             # Real-time WebMCP execution console
+│   │   │   ├── judge-guide/           # Devpost evaluator guide & rubric
+│   │   │   ├── showroom/              # 3D Digital Twin Showroom Shell (CAD & Multi-Panel)
+│   │   │   ├── sidebar/               # Dockable Workspace Hub Navigation
+│   │   │   ├── view-guide-modal/      # Interactive Views & Tools Documentation Modal
+│   │   │   ├── visualizer-3d/         # Three.js 3D viewport canvas & CAD tools
+│   │   │   └── customizer-form/       # Reactive configuration form
+│   │   ├── models/
+│   │   │   ├── enterprise-bi.types.ts # BI data interfaces & contracts
+│   │   │   └── sidebar.models.ts      # Workspace views configuration models
+│   │   ├── services/
+│   │   │   ├── ai-navigation.service.ts # AI Route & Viewport coordinator
+│   │   │   ├── copilot-bridge.service.ts # CPAMC Bridge & Autonomous Loop
+│   │   │   ├── enterprise-data.service.ts # Signals-based business dataset
+│   │   │   ├── sidebar-module-registry.service.ts # Dynamic view & tool registry
+│   │   │   └── view-guide.service.ts  # Global View Guide modal coordinator
+│   │   ├── app.ts                     # Root Shell with RouterOutlet, Header & Modals
+│   │   ├── app.html                   # Decoupled root template
+│   │   ├── app.config.ts              # Router & WebMCP provider config
+│   │   └── app.routes.ts              # Standalone lazy routes definition
+│   ├── styles.css                     # Tailwind CSS v4 directives & theme
+│   └── main.ts                        # App bootstrap
+├── angular.json                       # Angular CLI multi-project workspace config
+├── package.json                       # Root workspace scripts & dependencies
+├── tsconfig.json                      # Path aliases for @webmcp/angular
+├── LICENSE                            # MIT License
+└── README.md                          # Documentation & Devpost Submission Guide
 ```
 
 ---

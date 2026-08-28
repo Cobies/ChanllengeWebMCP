@@ -76,9 +76,9 @@ import { CommonModule } from '@angular/common';
           <div class="p-4 rounded-xl bg-gradient-to-r from-cyan-50/90 via-purple-50/70 to-slate-50 border border-cyan-200 space-y-3 shadow-xs">
             <div class="flex items-center justify-between">
               <h3 class="font-bold text-cyan-800 text-sm flex items-center gap-2">
-                <span>🤖 Live Autonomous Copilot with Gemini 3.7 Flash High</span>
+                <span>🤖 Live Autonomous AI Copilot</span>
                 <span class="px-2 py-0.5 text-[9px] rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-mono">
-                  CPAMC Bridge Proxy
+                  Bridge Proxy
                 </span>
               </h3>
             </div>
@@ -219,7 +219,7 @@ import { CommonModule } from '@angular/common';
                 <span class="font-bold text-slate-900">Innovation & User Experience</span>
               </div>
               <p class="text-slate-600 text-[11px] leading-relaxed">
-                Seamless multi-route Angular 22 dashboard combining Three.js 3D WebGL rendering, Enterprise BI analytics, and conversational Gemini 3.7 Copilot drawer.
+                Seamless multi-route Angular 22 dashboard combining Three.js 3D WebGL rendering, Enterprise BI analytics, and conversational AI Copilot drawer.
               </p>
             </div>
 
@@ -303,7 +303,7 @@ import { CommonModule } from '@angular/common';
             </div>
             <div class="p-3 rounded-xl bg-white/80 border border-slate-200 shadow-xs">
               <span class="font-bold text-amber-700 block mb-1">Autonomous Multi-Turn Loop</span>
-              <p class="text-[11px] text-slate-600 leading-relaxed">Gemini 3.7 Flash High copilot executes recursive tool calling up to 5 turns with base64 context sanitization.</p>
+              <p class="text-[11px] text-slate-600 leading-relaxed">Autonomous AI copilot executes recursive tool calling up to 5 turns with base64 context sanitization.</p>
             </div>
           </div>
         </div>

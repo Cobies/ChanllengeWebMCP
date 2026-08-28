@@ -11,6 +11,7 @@ import {
   OpenAiFunctionTool,
   ToolExecutionMeta,
 } from './copilot-bridge.types';
+import { SidebarModuleRegistryService } from './sidebar-module-registry.service';
 
 export const BRIDGE_API_BASE = 'https://bridge.cobiesscooby.com/v1';
 
@@ -28,6 +29,7 @@ export const MAX_TOOL_TURNS = 5;
 export class CopilotBridgeService {
   private readonly http: HttpClient;
   private readonly webmcp: WebMcpService;
+  private readonly registry?: SidebarModuleRegistryService;
 
   readonly selectedModel = signal<string>('gemini-3.7-flash-high');
   readonly availableModels = signal<BridgeModel[]>(DEFAULT_FALLBACK_MODELS);
@@ -41,10 +43,12 @@ export class CopilotBridgeService {
 
   constructor(
     @Optional() http?: HttpClient,
-    @Optional() webmcp?: WebMcpService
+    @Optional() webmcp?: WebMcpService,
+    @Optional() registry?: SidebarModuleRegistryService
   ) {
     this.http = http ?? inject(HttpClient);
     this.webmcp = webmcp ?? inject(WebMcpService);
+    this.registry = registry ?? inject(SidebarModuleRegistryService, { optional: true }) ?? undefined;
   }
 
 
@@ -132,6 +136,94 @@ export class CopilotBridgeService {
   }
 
   /**
+   * Constructs the dynamic contextual system prompt embedding current workspace view, active tools, views catalog, and operational directives.
+   */
+  buildDynamicSystemPrompt(): string {
+    const activeView = this.registry?.activeView();
+    const activeRoute = this.registry?.activeRoute() || '/3d-showroom';
+    const activeTools = this.webmcp.getTools().map((t) => t.name);
+    const views = this.registry?.views() || [];
+
+    const activeToolsList = activeTools.length > 0 ? activeTools.join(', ') : 'none';
+    const currentViewTitle = activeView?.title || '3D Digital Twin';
+    const currentViewId = activeView?.id || 'view-3d-showroom';
+    const currentViewRoute = activeView?.route || activeRoute;
+
+    let catalogTable = '| View | Title | Route | Tools |\n|---|---|---|---|\n';
+    for (const v of views) {
+      if (!v.route && !v.tools?.length) continue;
+      const toolList = (v.tools || []).join(', ') || 'none';
+      catalogTable += `| ${v.id} | ${v.title} | ${v.route || 'N/A'} | ${toolList} |\n`;
+    }
+
+    return `You are AI Copilot, an autonomous multimodal AI assistant embedded in the WebMCP Angular Showcase.
+
+### CURRENT WORKSPACE CONTEXT:
+- Active View: ${currentViewTitle} (ID: ${currentViewId}, Route: ${currentViewRoute})
+- Currently Available WebMCP Tools: ${activeToolsList}
+
+### AVAILABLE WORKSPACE VIEWS CATALOG:
+${catalogTable.trim()}
+
+### OPERATIONAL DIRECTIVES:
+1. You can directly execute ANY tool listed under 'Currently Available WebMCP Tools'.
+2. CRITICAL - CROSS-VIEW ACTIONS: If the user requests an action requiring tools in another workspace view, you MUST FIRST call the \`navigate_to_view\` tool with the appropriate \`targetView\` and \`reason\`.
+3. Once navigated, the system mounts that view's tools for subsequent turns.
+4. Tone & Style: Respond in a natural, fluid conversational tone. Avoid robotic formatting, excessive markdown headers (#, ##, ###), or walls of text. Keep responses concise and human-friendly.`;
+  }
+
+  /**
+   * Extracts reasoning / thought contents from API response or embedded XML tags,
+   * stripping thought tags from user-facing content.
+   */
+  extractThinkingAndCleanContent(message?: {
+    content?: string | null;
+    reasoning_content?: string;
+  }): { cleanContent: string | null; thinking?: string } {
+    if (!message) {
+      return { cleanContent: null, thinking: undefined };
+    }
+
+    const thinkingParts: string[] = [];
+    const msgAny = message as any;
+
+    if (
+      msgAny.reasoning_content &&
+      typeof msgAny.reasoning_content === 'string' &&
+      msgAny.reasoning_content.trim()
+    ) {
+      thinkingParts.push(msgAny.reasoning_content.trim());
+    } else if (
+      msgAny.reasoning &&
+      typeof msgAny.reasoning === 'string' &&
+      msgAny.reasoning.trim()
+    ) {
+      thinkingParts.push(msgAny.reasoning.trim());
+    }
+
+    let content = message.content ?? null;
+
+    if (content) {
+      const tagRegex = /<(?:think|thought)>([\s\S]*?)<\/(?:think|thought)>/gi;
+      let match: RegExpExecArray | null;
+
+      while ((match = tagRegex.exec(content)) !== null) {
+        if (match[1] && match[1].trim()) {
+          thinkingParts.push(match[1].trim());
+        }
+      }
+
+      const stripped = content.replace(tagRegex, '').trim();
+      content = stripped.length > 0 ? stripped : null;
+    }
+
+    return {
+      cleanContent: content,
+      thinking: thinkingParts.length > 0 ? thinkingParts.join('\n\n') : undefined,
+    };
+  }
+
+  /**
    * Recursive execution runner supporting multi-turn tool calling with safety recursion cap.
    */
   private async runAutonomousTurn(turn: number): Promise<void> {
@@ -149,32 +241,45 @@ export class CopilotBridgeService {
     }
 
     const openAiTools = this.getOpenAiTools();
+    const dynamicSystemPrompt = this.buildDynamicSystemPrompt();
 
     // Sanitize context for OpenAI Chat Completions API
-    const sanitizedHistory = this.messages().map((m) => {
-      const payload: {
-        role: 'system' | 'user' | 'assistant' | 'tool';
-        content?: string | null;
-        name?: string;
-        tool_call_id?: string;
-        tool_calls?: any[];
-      } = {
-        role: m.role,
-        content: m.content !== undefined ? m.content : null,
-      };
+    const sanitizedHistory: Array<{
+      role: 'system' | 'user' | 'assistant' | 'tool';
+      content?: string | null;
+      name?: string;
+      tool_call_id?: string;
+      tool_calls?: any[];
+    }> = [
+      {
+        role: 'system',
+        content: dynamicSystemPrompt,
+      },
+      ...this.messages().map((m) => {
+        const payload: {
+          role: 'system' | 'user' | 'assistant' | 'tool';
+          content?: string | null;
+          name?: string;
+          tool_call_id?: string;
+          tool_calls?: any[];
+        } = {
+          role: m.role,
+          content: m.content !== undefined ? m.content : null,
+        };
 
-      if (m.tool_call_id) {
-        payload.tool_call_id = m.tool_call_id;
-      }
-      if (m.name) {
-        payload.name = m.name;
-      }
-      if (m.tool_calls && m.tool_calls.length > 0) {
-        payload.tool_calls = m.tool_calls;
-      }
+        if (m.tool_call_id) {
+          payload.tool_call_id = m.tool_call_id;
+        }
+        if (m.name) {
+          payload.name = m.name;
+        }
+        if (m.tool_calls && m.tool_calls.length > 0) {
+          payload.tool_calls = m.tool_calls;
+        }
 
-      return payload;
-    });
+        return payload;
+      }),
+    ];
 
     const requestPayload: ChatCompletionRequest = {
       model: this.selectedModel(),
@@ -197,16 +302,18 @@ export class CopilotBridgeService {
 
     const message = choice.message;
     const toolCalls = message?.tool_calls;
+    const { cleanContent, thinking } = this.extractThinkingAndCleanContent(message);
 
     // Case 1: Model finished with text response
     if (choice.finish_reason === 'stop' || !toolCalls || toolCalls.length === 0) {
-      if (message?.content) {
+      if (cleanContent || thinking) {
         this.messages.update((prev) => [
           ...prev,
           {
             id: 'msg-' + Math.random().toString(36).substring(2, 9),
             role: 'assistant',
-            content: message.content,
+            content: cleanContent,
+            thinking,
             timestamp: Date.now(),
           },
         ]);
@@ -220,7 +327,8 @@ export class CopilotBridgeService {
       {
         id: 'msg-' + Math.random().toString(36).substring(2, 9),
         role: 'assistant',
-        content: message.content || null,
+        content: cleanContent,
+        thinking,
         tool_calls: toolCalls,
         timestamp: Date.now(),
       },

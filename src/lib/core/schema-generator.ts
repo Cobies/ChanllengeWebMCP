@@ -46,12 +46,29 @@ export function validateParameters(
 
     // Type check
     const actualType = Array.isArray(val) ? 'array' : typeof val;
-    if (propSchema.type === 'integer') {
-      if (typeof val !== 'number' || !Number.isInteger(val)) {
-        errors.push(`Parameter '${key}' must be an integer, received: ${typeof val}`);
+    if (propSchema.oneOf || propSchema.anyOf) {
+      const allowed = propSchema.oneOf || propSchema.anyOf;
+      const matched = allowed?.some((subSchema) => {
+        const subType = subSchema.type;
+        if (!subType) return true;
+        if (subType === 'integer') return typeof val === 'number' && Number.isInteger(val);
+        return subType === actualType;
+      });
+      if (!matched) {
+        errors.push(`Parameter '${key}' did not match any of the allowed schemas in oneOf/anyOf`);
       }
-    } else if (propSchema.type !== actualType) {
-      errors.push(`Parameter '${key}' must be of type '${propSchema.type}', received: '${actualType}'`);
+    } else if (propSchema.type) {
+      if (Array.isArray(propSchema.type)) {
+        if (!propSchema.type.includes(actualType as any)) {
+          errors.push(`Parameter '${key}' must be one of [${propSchema.type.join(', ')}], received: '${actualType}'`);
+        }
+      } else if (propSchema.type === 'integer') {
+        if (typeof val !== 'number' || !Number.isInteger(val)) {
+          errors.push(`Parameter '${key}' must be an integer, received: ${typeof val}`);
+        }
+      } else if (propSchema.type !== actualType) {
+        errors.push(`Parameter '${key}' must be of type '${propSchema.type}', received: '${actualType}'`);
+      }
     }
 
     // Enum check
