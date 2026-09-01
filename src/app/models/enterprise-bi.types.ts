@@ -118,4 +118,14 @@ export interface ReorderReceipt {
   estimatedArrival: string;
   totalCost: number;
   orderedAt: string;
+  notes?: string;
+}
+
+export interface PurchaseOrderFormState {
+  domain: BusinessDomain;
+  sku: string;
+  supplierId: string;
+  quantity: number;
+  priority: ReorderPriority;
+  notes: string;
 }

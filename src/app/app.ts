@@ -33,8 +33,9 @@ export class App {
 
   readonly isFullBleedRoute = computed(() => {
     const url = this.currentUrl();
-    const path = url.split('?')[0].split('#')[0];
-    return path === '/3d-showroom' || path === '/' || path === '';
+    const rawPath = url.split('?')[0].split('#')[0];
+    const path = rawPath.replace(/\/+$/, '') || '/';
+    return path === '/3d-showroom' || path === '/';
   });
 
   readonly mainMarginClass = computed(() => {

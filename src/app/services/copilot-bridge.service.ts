@@ -1,7 +1,15 @@
 import { Injectable, inject, signal, Optional } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { WebMcpService, WebMcpToolDefinition } from '@webmcp/angular';
+import {
+  WebMcpService,
+  WebMcpToolDefinition,
+  SubAgentRegistryService,
+  createDelegationTool,
+  getDelegationToolDefinition,
+  DELEGATE_TO_SUBAGENT_TOOL_NAME,
+  SubAgentResult,
+} from '@cobies/webmcp-angular';
 import {
   BridgeModel,
   ModelsResponse,
@@ -12,6 +20,8 @@ import {
   ToolExecutionMeta,
 } from './copilot-bridge.types';
 import { SidebarModuleRegistryService } from './sidebar-module-registry.service';
+import { SubAgentRunnerService } from './subagent-runner.service';
+import { SubAgentType, SubAgentExecutionReceipt } from './subagent.types';
 
 export const BRIDGE_API_BASE = 'https://bridge.cobiesscooby.com/v1';
 
@@ -23,6 +33,34 @@ export const DEFAULT_FALLBACK_MODELS: BridgeModel[] = [
 
 export const MAX_TOOL_TURNS = 5;
 
+export const DELEGATE_TO_SPECIALIST_TOOL: OpenAiFunctionTool = {
+  type: 'function',
+  function: {
+    name: 'delegate_to_specialist',
+    description: 'Delegates complex, multi-step domain analysis or spatial operations to an isolated specialist subagent (3D, BI, or System Audit). Keeps parent context clean and returns an executive receipt.',
+    parameters: {
+      type: 'object',
+      properties: {
+        specialist: {
+          type: 'string',
+          enum: ['3d-specialist', 'analytics-specialist', 'audit-specialist'],
+          description: 'The specialized subagent best suited for the task',
+        },
+        taskObjective: {
+          type: 'string',
+          description: 'The detailed objective or instructions for the subagent to execute',
+        },
+        parameters: {
+          type: 'object',
+          description: 'Optional structured parameters or filter criteria to pass to the subagent',
+        },
+      },
+      required: ['specialist', 'taskObjective'],
+      additionalProperties: false,
+    },
+  },
+};
+
 @Injectable({
   providedIn: 'root',
 })
@@ -30,6 +68,8 @@ export class CopilotBridgeService {
   private readonly http: HttpClient;
   private readonly webmcp: WebMcpService;
   private readonly registry?: SidebarModuleRegistryService;
+  private readonly subagentRunner?: SubAgentRunnerService;
+  private readonly subagentRegistry?: SubAgentRegistryService;
 
   readonly selectedModel = signal<string>('gemini-3.7-flash-high');
   readonly availableModels = signal<BridgeModel[]>(DEFAULT_FALLBACK_MODELS);
@@ -44,11 +84,61 @@ export class CopilotBridgeService {
   constructor(
     @Optional() http?: HttpClient,
     @Optional() webmcp?: WebMcpService,
-    @Optional() registry?: SidebarModuleRegistryService
+    @Optional() registry?: SidebarModuleRegistryService,
+    @Optional() subagentRunner?: SubAgentRunnerService,
+    @Optional() subagentRegistry?: SubAgentRegistryService
   ) {
-    this.http = http ?? inject(HttpClient);
-    this.webmcp = webmcp ?? inject(WebMcpService);
-    this.registry = registry ?? inject(SidebarModuleRegistryService, { optional: true }) ?? undefined;
+    if (http) {
+      this.http = http;
+    } else {
+      try {
+        this.http = inject(HttpClient);
+      } catch {
+        this.http = undefined as any;
+      }
+    }
+
+    if (webmcp) {
+      this.webmcp = webmcp;
+    } else {
+      try {
+        this.webmcp = inject(WebMcpService);
+      } catch {
+        this.webmcp = undefined as any;
+      }
+    }
+
+    if (registry) {
+      this.registry = registry;
+    } else {
+      try {
+        this.registry = inject(SidebarModuleRegistryService, { optional: true }) ?? undefined;
+      } catch {
+        this.registry = undefined;
+      }
+    }
+
+    if (subagentRunner) {
+      this.subagentRunner = subagentRunner;
+    } else {
+      try {
+        this.subagentRunner = inject(SubAgentRunnerService, { optional: true }) ?? undefined;
+      } catch {
+        this.subagentRunner = undefined;
+      }
+    }
+
+    if (subagentRegistry) {
+      this.subagentRegistry = subagentRegistry;
+    } else if (this.subagentRunner?.registry) {
+      this.subagentRegistry = this.subagentRunner.registry;
+    } else {
+      try {
+        this.subagentRegistry = inject(SubAgentRegistryService, { optional: true }) ?? undefined;
+      } catch {
+        this.subagentRegistry = undefined;
+      }
+    }
   }
 
 
@@ -79,10 +169,11 @@ export class CopilotBridgeService {
 
   /**
    * Converts all registered WebMCP browser tools into OpenAI Function Calling format.
+   * Prepends dynamic subagent delegation tool when subagents are registered.
    */
   getOpenAiTools(): OpenAiFunctionTool[] {
     const webmcpTools: WebMcpToolDefinition[] = this.webmcp.getTools();
-    return webmcpTools.map((tool) => ({
+    const tools: OpenAiFunctionTool[] = webmcpTools.map((tool) => ({
       type: 'function',
       function: {
         name: tool.name,
@@ -95,7 +186,30 @@ export class CopilotBridgeService {
         },
       },
     }));
+
+    const activeRegistry = this.subagentRegistry ?? this.subagentRunner?.registry;
+    if (activeRegistry && activeRegistry.subagents().length > 0) {
+      const delegationDef = activeRegistry.createDelegationTool();
+      tools.unshift({
+        type: 'function',
+        function: {
+          name: delegationDef.name,
+          description: delegationDef.description,
+          parameters: {
+            type: 'object',
+            properties: (delegationDef.parameters?.properties || {}) as Record<string, unknown>,
+            required: delegationDef.parameters?.required || [],
+            additionalProperties: delegationDef.parameters?.additionalProperties ?? false,
+          },
+        },
+      });
+    } else if (this.subagentRunner) {
+      tools.unshift(DELEGATE_TO_SPECIALIST_TOOL);
+    }
+
+    return tools;
   }
+
 
   /**
    * Dispatches a user message and triggers the autonomous recursive tool-calling loop.
@@ -149,27 +263,36 @@ export class CopilotBridgeService {
     const currentViewId = activeView?.id || 'view-3d-showroom';
     const currentViewRoute = activeView?.route || activeRoute;
 
-    let catalogTable = '| View | Title | Route | Tools |\n|---|---|---|---|\n';
+    let catalogTable = '| View | Route | Tools |\n|---|---|---|\n';
     for (const v of views) {
       if (!v.route && !v.tools?.length) continue;
       const toolList = (v.tools || []).join(', ') || 'none';
-      catalogTable += `| ${v.id} | ${v.title} | ${v.route || 'N/A'} | ${toolList} |\n`;
+      catalogTable += `| ${v.id} | ${v.route || 'N/A'} | ${toolList} |\n`;
     }
+
+    const activeRegistry = this.subagentRegistry ?? this.subagentRunner?.registry;
+    const registeredSubagents = activeRegistry?.subagents().map((a) => a.config.id) || [
+      '3d-specialist',
+      'analytics-specialist',
+      'audit-specialist',
+    ];
+    const subagentsList = registeredSubagents.length > 0 ? registeredSubagents.join(', ') : 'none';
 
     return `You are AI Copilot, an autonomous multimodal AI assistant embedded in the WebMCP Angular Showcase.
 
 ### CURRENT WORKSPACE CONTEXT:
 - Active View: ${currentViewTitle} (ID: ${currentViewId}, Route: ${currentViewRoute})
-- Currently Available WebMCP Tools: ${activeToolsList}
+- Available WebMCP Tools: ${activeToolsList}
+- Specialists: ${subagentsList}
 
 ### AVAILABLE WORKSPACE VIEWS CATALOG:
 ${catalogTable.trim()}
 
 ### OPERATIONAL DIRECTIVES:
-1. You can directly execute ANY tool listed under 'Currently Available WebMCP Tools'.
-2. CRITICAL - CROSS-VIEW ACTIONS: If the user requests an action requiring tools in another workspace view, you MUST FIRST call the \`navigate_to_view\` tool with the appropriate \`targetView\` and \`reason\`.
-3. Once navigated, the system mounts that view's tools for subsequent turns.
-4. Tone & Style: Respond in a natural, fluid conversational tone. Avoid robotic formatting, excessive markdown headers (#, ##, ###), or walls of text. Keep responses concise and human-friendly.`;
+1. DELEGATION: Call \`delegate_to_subagent\` for multi-step tasks to isolate context and get receipts.
+2. DIRECT TOOLS: Directly execute any tool from 'Available WebMCP Tools'.
+3. CROSS-VIEW ACTIONS: Call \`navigate_to_view\` with \`targetView\` if target tools are in another view.
+4. Tone: Concise, fluid, and human-friendly.`;
   }
 
   /**
@@ -366,7 +489,7 @@ ${catalogTable.trim()}
         continue;
       }
 
-      // Execute tool through WebMcpService
+      // Execute tool through SubAgentRunnerService or WebMcpService
       const startTime = performance.now();
       this.activeToolExecution.set({
         toolName,
@@ -375,27 +498,95 @@ ${catalogTable.trim()}
       });
 
       try {
-        const rawResult = (await this.webmcp.executeTool(
-          toolName,
-          parsedArgs,
-          'ui'
-        )) as any;
-        const durationMs = Math.round((performance.now() - startTime) * 100) / 100;
-
+        let compactResult: unknown;
         let imageUrl: string | undefined = undefined;
-        let compactResult = rawResult;
+        let subagentReceipt: SubAgentExecutionReceipt | undefined = undefined;
 
-        // Multimodal handling: extract image for UI preview & sanitize payload for LLM context
-        if (toolName === 'take_screenshot' && rawResult?.image) {
-          imageUrl = rawResult.image;
+        const isDelegationCall =
+          toolName === DELEGATE_TO_SUBAGENT_TOOL_NAME ||
+          toolName === 'delegate_to_subagent' ||
+          toolName === 'delegate_to_specialist';
+
+        if (isDelegationCall && (this.subagentRegistry || this.subagentRunner)) {
+          const activeRegistry = this.subagentRegistry ?? this.subagentRunner?.registry;
+          const targetSubagent =
+            (parsedArgs['target_subagent'] as string) ||
+            (parsedArgs['specialist'] as SubAgentType) ||
+            'custom';
+          const taskObjective =
+            (parsedArgs['objective'] as string) ||
+            (parsedArgs['taskObjective'] as string) ||
+            'Execute domain task';
+          const taskParams = parsedArgs['parameters'] as Record<string, unknown> | undefined;
+          const contextHint =
+            (parsedArgs['context_hint'] as string | undefined) ??
+            (parsedArgs['contextHint'] as string | undefined) ??
+            `Current Active View: ${this.registry?.activeView()?.title || '3D Digital Twin'} (${this.registry?.activeRoute() || '/3d-showroom'})`;
+
+          let receipt: SubAgentExecutionReceipt;
+
+          if (activeRegistry && activeRegistry.get(targetSubagent)) {
+            const result = await activeRegistry.execute(targetSubagent, {
+              objective: taskObjective,
+              parameters: taskParams,
+              contextHint,
+            });
+            receipt = {
+              agentType: result.subagentId as SubAgentType,
+              objective: result.objective,
+              status: result.status,
+              summary: result.summary,
+              resultData: result.data,
+              toolsUsed: result.toolsUsed,
+              totalTurns: result.totalTurns,
+              durationMs: result.durationMs,
+              tokenUsageEstimate: result.tokenUsageEstimate,
+              error: result.error,
+            };
+          } else if (this.subagentRunner) {
+            receipt = await this.subagentRunner.executeTask({
+              agentType: targetSubagent as SubAgentType,
+              objective: taskObjective,
+              parameters: taskParams,
+              contextHint,
+            });
+          } else {
+            throw new Error(`Target subagent "${targetSubagent}" is not available in registry.`);
+          }
+
+          subagentReceipt = receipt;
           compactResult = {
-            success: rawResult.success ?? true,
-            mimeType: rawResult.mimeType || 'image/png',
-            dimensions: rawResult.dimensions || { width: 800, height: 600 },
-            timestamp: rawResult.timestamp || Date.now(),
-            note: 'Screenshot captured and rendered in UI preview card.',
+            success: receipt.status === 'success',
+            specialist: receipt.agentType,
+            summary: receipt.summary,
+            toolsUsed: receipt.toolsUsed,
+            steps: receipt.totalTurns,
+            durationMs: receipt.durationMs,
+            tokenEstimate: receipt.tokenUsageEstimate,
           };
+        } else {
+          const rawResult = (await this.webmcp.executeTool(
+            toolName,
+            parsedArgs,
+            'ui'
+          )) as any;
+
+          compactResult = rawResult;
+
+          // Multimodal handling: extract image for UI preview & sanitize payload for LLM context
+          if (toolName === 'take_screenshot' && rawResult?.image) {
+            imageUrl = rawResult.image;
+            compactResult = {
+              success: rawResult.success ?? true,
+              mimeType: rawResult.mimeType || 'image/png',
+              dimensions: rawResult.dimensions || { width: 800, height: 600 },
+              timestamp: rawResult.timestamp || Date.now(),
+              note: 'Screenshot captured and rendered in UI preview card.',
+            };
+          }
         }
+
+        const durationMs = Math.round((performance.now() - startTime) * 100) / 100;
 
         const toolMsg: ChatMessage = {
           id: 'msg-' + Math.random().toString(36).substring(2, 9),
@@ -409,7 +600,9 @@ ${catalogTable.trim()}
             params: parsedArgs,
             result: compactResult,
             durationMs,
-            status: 'success',
+            status: subagentReceipt ? (subagentReceipt.status === 'success' ? 'success' : 'error') : 'success',
+            errorMessage: subagentReceipt?.error,
+            subagentReceipt,
           },
           timestamp: Date.now(),
           execution_time_ms: durationMs,

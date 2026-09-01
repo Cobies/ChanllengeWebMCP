@@ -30,3 +30,6 @@ yarn-error.log
 /.angular
 .DS_Store
 Thumbs.db
+# Local Pi runtime state
+.atl/
+.pi/

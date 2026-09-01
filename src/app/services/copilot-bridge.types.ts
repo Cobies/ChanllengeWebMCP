@@ -37,6 +37,8 @@ export interface ToolCallPayload {
   };
 }
 
+import { SubAgentExecutionReceipt } from './subagent.types';
+
 export interface ToolExecutionMeta {
   toolName: string;
   params: Record<string, unknown>;
@@ -44,6 +46,7 @@ export interface ToolExecutionMeta {
   durationMs?: number;
   status: 'running' | 'success' | 'error';
   errorMessage?: string;
+  subagentReceipt?: SubAgentExecutionReceipt;
 }
 
 export interface ChatMessage {

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, signal, Optional } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, Optional } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { WebMcpService } from '@webmcp/angular';
@@ -17,6 +17,8 @@ import {
   ReorderPriority,
   InventoryItem,
   DomainSummaryResult,
+  PurchaseOrderFormState,
+  ReorderReceipt,
 } from '../../models/enterprise-bi.types';
 import { BiToolRegistry } from '../../core/bi/registry';
 import { EnterpriseBiStateService } from '../../core/bi/enterprise-bi-state.service';
@@ -576,6 +578,14 @@ import { CloudFinOpsAdapter } from '../../core/bi/adapters/cloud-finops.adapter'
                   class="px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-xs text-slate-600 hover:text-slate-900 transition-all shadow-xs cursor-pointer">
                   Reset
                 </button>
+
+                <!-- New Purchase Order Button -->
+                <button
+                  (click)="openPurchaseModal()"
+                  class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5">
+                  <span>📦</span>
+                  <span>New Purchase Order</span>
+                </button>
               </div>
 
             </div>
@@ -660,17 +670,20 @@ import { CloudFinOpsAdapter } from '../../core/bi/adapters/cloud-finops.adapter'
                           <button
                             (click)="quickAdjustStock(item.sku, -1)"
                             [disabled]="item.stockLevel <= 0"
-                            class="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs disabled:opacity-30 cursor-pointer shadow-xs">
+                            class="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs disabled:opacity-30 cursor-pointer shadow-xs"
+                            title="Decrement stock by 1">
                             -
                           </button>
                           <button
                             (click)="quickAdjustStock(item.sku, 5)"
-                            class="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer shadow-xs">
+                            class="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer shadow-xs"
+                            title="Add 5 to stock">
                             +
                           </button>
                           <button
-                            (click)="quickReorder(item.sku, 25)"
-                            class="px-2 py-1 rounded bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-200 text-[11px] font-semibold transition-all cursor-pointer shadow-xs">
+                            (click)="openPurchaseModal(item.sku)"
+                            class="px-2.5 py-1 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-200 text-[11px] font-semibold transition-all cursor-pointer shadow-xs"
+                            title="Open Purchase Order Modal for this SKU">
                             Reorder
                           </button>
                         </div>
@@ -726,6 +739,374 @@ import { CloudFinOpsAdapter } from '../../core/bi/adapters/cloud-finops.adapter'
         </div>
       }
 
+      <!-- ========================================================================= -->
+      <!-- PURCHASE ORDER / PROCUREMENT MODAL (WebMCP Controlled & AI Autocompletable) -->
+      <!-- ========================================================================= -->
+      @if (isPurchaseModalOpen()) {
+        <div
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm animate-fadeIn"
+          (click)="closePurchaseModal()">
+          
+          <div
+            class="bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden text-slate-800 animate-fadeIn"
+            (click)="$event.stopPropagation()">
+            
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/80">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 p-0.5 shadow-sm">
+                  <div class="w-full h-full bg-white rounded-[10px] flex items-center justify-center text-lg">
+                    📦
+                  </div>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h2 class="text-base font-bold text-slate-900">Procurement & Purchase Order Dispatch</h2>
+                    <span class="px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200">
+                      WebMCP Controlled
+                    </span>
+                  </div>
+                  <p class="text-xs text-slate-500">Autonomous supplier replenishment orders with real-time dynamic pricing</p>
+                </div>
+              </div>
+
+              <button
+                (click)="closePurchaseModal()"
+                class="w-8 h-8 rounded-lg bg-slate-200/60 hover:bg-slate-200 text-slate-600 hover:text-slate-900 transition-colors flex items-center justify-center text-sm font-bold cursor-pointer"
+                aria-label="Close modal">
+                ✕
+              </button>
+            </div>
+
+            <!-- AI Agent Autocomplete Banner -->
+            @if (isAutoFilled()) {
+              <div class="px-6 py-2 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10 border-b border-cyan-200/60 flex items-center justify-between text-xs text-cyan-900 animate-fadeIn">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm">✨</span>
+                  <span class="font-medium">
+                    Auto-filled by WebMCP AI Agent
+                    @if (lastAutoFilledField()) {
+                      <span class="font-mono text-[11px] text-cyan-700">({{ lastAutoFilledField() }})</span>
+                    }
+                  </span>
+                </div>
+                <span class="px-2 py-0.5 rounded bg-cyan-100/80 text-cyan-800 text-[10px] font-mono font-semibold">Live Sync</span>
+              </div>
+            }
+
+            <!-- Modal Content Area -->
+            <div class="p-6 overflow-y-auto space-y-5 flex-1 text-xs text-slate-700">
+              
+              <!-- Case A: Order Created Successfully (Receipt View) -->
+              @if (purchaseModalSuccessReceipt()) {
+                <div class="p-6 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-4 text-center animate-fadeIn">
+                  <div class="w-12 h-12 rounded-full bg-emerald-500 text-white text-2xl flex items-center justify-center mx-auto shadow-md">
+                    ✓
+                  </div>
+                  <div class="space-y-1">
+                    <h3 class="text-base font-bold text-emerald-950">Purchase Order Dispatched Successfully!</h3>
+                    <p class="text-xs text-emerald-800 font-mono">Order Tracking ID: {{ purchaseModalSuccessReceipt()?.reorderId }}</p>
+                  </div>
+
+                  <!-- Receipt Summary Card -->
+                  <div class="p-4 rounded-xl bg-white/90 border border-emerald-200 text-left space-y-2.5 text-xs text-slate-800 shadow-xs">
+                    <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+                      <span class="text-slate-500 font-medium">SKU / Item:</span>
+                      <span class="font-mono font-bold text-slate-900">{{ purchaseModalSuccessReceipt()?.sku }}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                      <span class="text-slate-500 font-medium">Quantity Ordered:</span>
+                      <span class="font-mono font-bold">{{ purchaseModalSuccessReceipt()?.quantity }} units</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                      <span class="text-slate-500 font-medium">Priority Rating:</span>
+                      <span class="px-2 py-0.5 rounded uppercase font-bold text-[10px]"
+                        [ngClass]="purchaseModalSuccessReceipt()?.priority === 'critical' ? 'bg-rose-50 text-rose-700 border border-rose-200' : purchaseModalSuccessReceipt()?.priority === 'expedited' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-blue-50 text-blue-700 border border-blue-200'">
+                        {{ purchaseModalSuccessReceipt()?.priority }}
+                      </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                      <span class="text-slate-500 font-medium">Supplier:</span>
+                      <span class="font-semibold">{{ purchaseModalSuccessReceipt()?.supplier?.name }}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                      <span class="text-slate-500 font-medium">Estimated Arrival:</span>
+                      <span class="font-mono font-semibold text-cyan-800">{{ purchaseModalSuccessReceipt()?.estimatedArrival?.substring(0, 10) }}</span>
+                    </div>
+                    @if (purchaseModalSuccessReceipt()?.notes) {
+                      <div class="flex justify-between items-center">
+                        <span class="text-slate-500 font-medium">Notes:</span>
+                        <span class="italic text-slate-600">{{ purchaseModalSuccessReceipt()?.notes }}</span>
+                      </div>
+                    }
+                    <div class="flex justify-between items-center pt-2 border-t border-slate-200 font-bold">
+                      <span class="text-slate-700">Total Valuation:</span>
+                      <span class="text-base font-mono text-emerald-700">{{ formatCurrency(purchaseModalSuccessReceipt()?.totalCost || 0) }}</span>
+                    </div>
+                  </div>
+
+                  <div class="flex justify-center gap-3 pt-2">
+                    <button
+                      (click)="closePurchaseModal()"
+                      class="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-all cursor-pointer">
+                      Close Window
+                    </button>
+                    <button
+                      (click)="purchaseModalSuccessReceipt.set(null)"
+                      class="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs transition-all shadow-xs cursor-pointer">
+                      Create Another Order
+                    </button>
+                  </div>
+                </div>
+              } @else {
+                <!-- Case B: Purchase Order Form -->
+                <div class="space-y-4">
+                  
+                  <!-- Form Row 1: Domain & SKU Select -->
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Domain Select -->
+                    <div class="space-y-1.5">
+                      <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                        Business Domain
+                      </label>
+                      <select
+                        [ngModel]="purchaseForm().domain"
+                        (ngModelChange)="onPurchaseDomainChange($event)"
+                        class="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 shadow-xs">
+                        <option value="all">All Domains</option>
+                        <option value="retail">Retail Domain</option>
+                        <option value="hardware">Hardware Domain</option>
+                        <option value="logistics">Logistics Domain</option>
+                        <option value="pharma">Pharma Domain</option>
+                      </select>
+                    </div>
+
+                    <!-- SKU / Item Select -->
+                    <div class="space-y-1.5">
+                      <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                        Target SKU / Catalog Item
+                      </label>
+                      <select
+                        [ngModel]="purchaseForm().sku"
+                        (ngModelChange)="onPurchaseSkuChange($event)"
+                        class="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 shadow-xs font-mono">
+                        <option value="" disabled>-- Select an Item / SKU --</option>
+                        @for (item of availablePurchaseSkus(); track item.sku) {
+                          <option [value]="item.sku">
+                            [{{ item.sku }}] {{ item.name }} ({{ formatCurrency(item.unitPrice) }} - Stock: {{ item.stockLevel }})
+                          </option>
+                        }
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Selected Item Quick Snapshot Card -->
+                  @if (selectedPurchaseItem()) {
+                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                      <div>
+                        <div class="text-[10px] text-slate-500">Current Stock</div>
+                        <div class="font-mono font-bold"
+                          [ngClass]="selectedPurchaseItem()!.stockLevel === 0 ? 'text-rose-600' : selectedPurchaseItem()!.stockLevel <= selectedPurchaseItem()!.minThreshold ? 'text-amber-600' : 'text-emerald-700'">
+                          {{ selectedPurchaseItem()!.stockLevel }} / {{ selectedPurchaseItem()!.maxCapacity }}
+                        </div>
+                      </div>
+                      <div>
+                        <div class="text-[10px] text-slate-500">Min Threshold</div>
+                        <div class="font-mono font-semibold text-slate-700">{{ selectedPurchaseItem()!.minThreshold }} units</div>
+                      </div>
+                      <div>
+                        <div class="text-[10px] text-slate-500">Unit Price</div>
+                        <div class="font-mono font-bold text-slate-900">{{ formatCurrency(selectedPurchaseItem()!.unitPrice) }}</div>
+                      </div>
+                      <div>
+                        <div class="text-[10px] text-slate-500">Stock Status</div>
+                        <span class="px-2 py-0.2 rounded-full text-[10px] font-semibold"
+                          [ngClass]="getInventoryStatusBadgeClass(selectedPurchaseItem()!.status)">
+                          {{ selectedPurchaseItem()!.status }}
+                        </span>
+                      </div>
+                    </div>
+                  }
+
+                  <!-- Form Row 2: Supplier & Priority Select -->
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Supplier Select -->
+                    <div class="space-y-1.5">
+                      <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                        Authorized Supplier
+                      </label>
+                      <select
+                        [ngModel]="purchaseForm().supplierId"
+                        (ngModelChange)="onPurchaseSupplierChange($event)"
+                        class="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 shadow-xs">
+                        @for (sup of availablePurchaseSuppliers(); track sup.id) {
+                          <option [value]="sup.id">
+                            {{ sup.name }} (Lead: {{ sup.leadTimeDays }}d | ⭐ {{ sup.rating }})
+                          </option>
+                        }
+                      </select>
+                    </div>
+
+                    <!-- Priority Select -->
+                    <div class="space-y-1.5">
+                      <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                        Fulfillment Priority
+                      </label>
+                      <div class="grid grid-cols-3 gap-1.5">
+                        <button
+                          type="button"
+                          (click)="setPurchasePriority('standard')"
+                          class="py-1.5 px-2 rounded-xl text-xs font-semibold border transition-all text-center cursor-pointer shadow-xs"
+                          [ngClass]="purchaseForm().priority === 'standard' ? 'bg-blue-50 border-blue-400 text-blue-800 ring-1 ring-blue-400' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'">
+                          Standard
+                          <span class="block text-[9px] text-slate-500 font-mono">1.0x ({{ selectedPurchaseSupplier()?.leadTimeDays || 3 }}d)</span>
+                        </button>
+                        <button
+                          type="button"
+                          (click)="setPurchasePriority('expedited')"
+                          class="py-1.5 px-2 rounded-xl text-xs font-semibold border transition-all text-center cursor-pointer shadow-xs"
+                          [ngClass]="purchaseForm().priority === 'expedited' ? 'bg-amber-50 border-amber-400 text-amber-800 ring-1 ring-amber-400' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'">
+                          Expedited
+                          <span class="block text-[9px] text-slate-500 font-mono">1.1x (+10%)</span>
+                        </button>
+                        <button
+                          type="button"
+                          (click)="setPurchasePriority('critical')"
+                          class="py-1.5 px-2 rounded-xl text-xs font-semibold border transition-all text-center cursor-pointer shadow-xs"
+                          [ngClass]="purchaseForm().priority === 'critical' ? 'bg-rose-50 border-rose-400 text-rose-800 ring-1 ring-rose-400' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'">
+                          Critical
+                          <span class="block text-[9px] text-slate-500 font-mono">1.25x (Rush)</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Form Row 3: Quantity & AI Helper -->
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                    <div class="space-y-1.5">
+                      <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                        Order Quantity (Units)
+                      </label>
+                      <div class="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          (click)="adjustPurchaseQuantity(-10)"
+                          class="px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono font-bold text-xs cursor-pointer shadow-xs">
+                          -10
+                        </button>
+                        <button
+                          type="button"
+                          (click)="adjustPurchaseQuantity(-1)"
+                          class="px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono font-bold text-xs cursor-pointer shadow-xs">
+                          -1
+                        </button>
+                        <input
+                          type="number"
+                          min="1"
+                          [ngModel]="purchaseForm().quantity"
+                          (ngModelChange)="setPurchaseQuantity($event)"
+                          class="flex-1 px-3 py-2 rounded-xl bg-white border border-slate-200 text-center font-mono font-bold text-slate-900 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 shadow-xs"/>
+                        <button
+                          type="button"
+                          (click)="adjustPurchaseQuantity(1)"
+                          class="px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono font-bold text-xs cursor-pointer shadow-xs">
+                          +1
+                        </button>
+                        <button
+                          type="button"
+                          (click)="adjustPurchaseQuantity(10)"
+                          class="px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono font-bold text-xs cursor-pointer shadow-xs">
+                          +10
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- AI Replenishment Autofill Helper -->
+                    <div>
+                      <button
+                        type="button"
+                        (click)="autoFillSuggestedReplenishment()"
+                        class="w-full px-3 py-2 rounded-xl bg-gradient-to-r from-cyan-50 via-blue-50 to-indigo-50 hover:from-cyan-100 hover:to-indigo-100 border border-cyan-200/80 text-cyan-800 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer">
+                        <span>🤖</span>
+                        <span>Auto-Calculate Replenishment</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Form Row 4: Notes / Justification -->
+                  <div class="space-y-1.5">
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                      Purchase Order Justification / Notes
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Q3 safety stock buffer replenishment, WebMCP automated dispatch"
+                      [ngModel]="purchaseForm().notes"
+                      (ngModelChange)="setPurchaseNotes($event)"
+                      class="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 shadow-xs"/>
+                  </div>
+
+                  <!-- Live Cost Calculation Summary Panel -->
+                  <div class="p-4 rounded-xl bg-gradient-to-br from-slate-50 to-cyan-50/30 border border-slate-200 space-y-2">
+                    <div class="text-[11px] font-bold text-slate-700 uppercase tracking-wider pb-1 border-b border-slate-200/80 flex items-center justify-between">
+                      <span>Order Valuation & Delivery Breakdown</span>
+                      <span class="font-mono text-slate-500">Lead Time: {{ calculatedLeadDays() }} days</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-xs">
+                      <div>
+                        <div class="text-[10px] text-slate-500">Base Subtotal</div>
+                        <div class="font-mono font-semibold text-slate-800">{{ formatCurrency(calculatedSubtotal()) }}</div>
+                      </div>
+                      <div>
+                        <div class="text-[10px] text-slate-500">Priority Surcharge</div>
+                        <div class="font-mono font-semibold"
+                          [ngClass]="purchaseForm().priority === 'critical' ? 'text-rose-600' : purchaseForm().priority === 'expedited' ? 'text-amber-600' : 'text-slate-600'">
+                          {{ purchaseForm().priority === 'critical' ? '+25%' : purchaseForm().priority === 'expedited' ? '+10%' : '0%' }}
+                        </div>
+                      </div>
+                      <div>
+                        <div class="text-[10px] text-slate-500">Est. Delivery</div>
+                        <div class="font-mono font-semibold text-cyan-800">{{ calculatedArrivalDate() }}</div>
+                      </div>
+                      <div class="text-right">
+                        <div class="text-[10px] text-slate-500">Total Purchase Cost</div>
+                        <div class="font-mono font-extrabold text-base text-cyan-700">
+                          {{ formatCurrency(calculatedTotalCost()) }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              }
+            </div>
+
+            <!-- Modal Footer (only when not in success view) -->
+            @if (!purchaseModalSuccessReceipt()) {
+              <div class="px-6 py-3.5 border-t border-slate-200/80 bg-slate-50/80 flex items-center justify-between">
+                <button
+                  type="button"
+                  (click)="closePurchaseModal()"
+                  class="px-4 py-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 text-xs font-semibold transition-all cursor-pointer">
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  (click)="submitPurchaseOrderForm()"
+                  [disabled]="!purchaseForm().sku || purchaseForm().quantity <= 0"
+                  class="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs transition-all shadow-md shadow-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer">
+                  <span>🚀</span>
+                  <span>Confirm & Dispatch Purchase Order</span>
+                </button>
+              </div>
+            }
+
+          </div>
+        </div>
+      }
+
     </div>
   `,
   styles: [`
@@ -747,6 +1128,84 @@ export class EnterpriseBiComponent implements OnInit, OnDestroy {
 
   readonly activeTab = signal<EnterpriseBiTab>('analytics');
   readonly lastActionResult = signal<string | null>(null);
+
+  // Purchase Order Modal Signals & State
+  readonly isPurchaseModalOpen = signal<boolean>(false);
+  readonly purchaseModalSuccessReceipt = signal<ReorderReceipt | null>(null);
+  readonly isAutoFilled = signal<boolean>(false);
+  readonly lastAutoFilledField = signal<string | null>(null);
+
+  readonly purchaseForm = signal<PurchaseOrderFormState>({
+    domain: 'all',
+    sku: '',
+    supplierId: '',
+    quantity: 25,
+    priority: 'standard',
+    notes: '',
+  });
+
+  readonly availablePurchaseSkus = computed(() => {
+    const domain = this.purchaseForm().domain;
+    const all = this.dataService.inventory();
+    if (domain === 'all') return all;
+    return all.filter((i) => i.domain === domain);
+  });
+
+  readonly selectedPurchaseItem = computed(() => {
+    const sku = this.purchaseForm().sku;
+    if (!sku) return null;
+    return this.dataService.inventory().find((i) => i.sku.toLowerCase() === sku.toLowerCase()) || null;
+  });
+
+  readonly availablePurchaseSuppliers = computed(() => {
+    const item = this.selectedPurchaseItem();
+    if (item && item.supplier) {
+      const all = this.dataService.allSuppliers();
+      if (!all.some((s) => s.id === item.supplier.id)) {
+        return [item.supplier, ...all];
+      }
+      return all;
+    }
+    return this.dataService.allSuppliers();
+  });
+
+  readonly selectedPurchaseSupplier = computed(() => {
+    const supplierId = this.purchaseForm().supplierId;
+    const item = this.selectedPurchaseItem();
+    if (supplierId) {
+      const found = this.availablePurchaseSuppliers().find((s) => s.id === supplierId);
+      if (found) return found;
+    }
+    return item?.supplier || this.availablePurchaseSuppliers()[0] || null;
+  });
+
+  readonly calculatedLeadDays = computed(() => {
+    const supplier = this.selectedPurchaseSupplier();
+    const priority = this.purchaseForm().priority;
+    if (!supplier) return 3;
+    const leadFactor = priority === 'critical' ? 0.33 : priority === 'expedited' ? 0.5 : 1.0;
+    return Math.max(1, Math.ceil(supplier.leadTimeDays * leadFactor));
+  });
+
+  readonly calculatedArrivalDate = computed(() => {
+    const days = this.calculatedLeadDays();
+    const d = new Date(Date.now() + days * 86400000);
+    return d.toISOString().substring(0, 10);
+  });
+
+  readonly calculatedSubtotal = computed(() => {
+    const item = this.selectedPurchaseItem();
+    const qty = this.purchaseForm().quantity;
+    if (!item || qty <= 0) return 0;
+    return Math.round(item.unitPrice * qty * 100) / 100;
+  });
+
+  readonly calculatedTotalCost = computed(() => {
+    const subtotal = this.calculatedSubtotal();
+    const priority = this.purchaseForm().priority;
+    const multiplier = priority === 'critical' ? 1.25 : priority === 'expedited' ? 1.1 : 1.0;
+    return Math.round(subtotal * multiplier * 100) / 100;
+  });
 
   constructor(
     @Optional() webmcp?: WebMcpService,
@@ -1210,6 +1669,241 @@ export class EnterpriseBiComponent implements OnInit, OnDestroy {
         };
       },
     });
+
+    // 10. open_purchase_order_modal
+    this.webmcp.registerTool({
+      name: 'open_purchase_order_modal',
+      description: 'Open the procurement and purchase order modal in the multi-domain inventory workspace, optionally prefilling SKU, domain, quantity, priority, or notes.',
+      parameters: {
+        type: 'object',
+        properties: {
+          sku: {
+            type: 'string',
+            description: 'Target item SKU code (e.g. RET-101, HDW-201, LOG-301, PHM-401)',
+          },
+          domain: {
+            type: 'string',
+            enum: ['retail', 'hardware', 'logistics', 'pharma', 'all'],
+            description: 'Business domain filter',
+          },
+          quantity: {
+            type: 'number',
+            description: 'Number of units to reorder (min 1)',
+          },
+          priority: {
+            type: 'string',
+            enum: ['standard', 'expedited', 'critical'],
+            description: 'Fulfillment priority rating',
+          },
+          notes: {
+            type: 'string',
+            description: 'Optional purchase justification or audit note',
+          },
+        },
+      },
+      handler: async (args: {
+        sku?: string;
+        domain?: BusinessDomain;
+        quantity?: number;
+        priority?: ReorderPriority;
+        notes?: string;
+      }) => {
+        this.openPurchaseModal(args.sku, args.domain, args.quantity, args.priority, args.notes);
+        if (args.sku || args.quantity || args.priority || args.notes) {
+          this.isAutoFilled.set(true);
+          const fields = Object.keys(args).filter((k) => (args as any)[k] !== undefined).join(', ');
+          this.lastAutoFilledField.set(fields);
+        }
+        const feedback = `Opened purchase order modal${args.sku ? ` for SKU ${args.sku}` : ''}`;
+        this.lastActionResult.set(feedback);
+        return {
+          success: true,
+          isOpen: true,
+          form: this.purchaseForm(),
+          selectedItem: this.selectedPurchaseItem(),
+          totalCost: this.calculatedTotalCost(),
+          estimatedArrival: this.calculatedArrivalDate(),
+        };
+      },
+    });
+
+    // 11. fill_purchase_order_form
+    this.webmcp.registerTool({
+      name: 'fill_purchase_order_form',
+      description: 'Autofill and control the interactive purchase order form selects and input fields (SKU, supplier, quantity, priority, notes) in real-time via WebMCP AI agent.',
+      parameters: {
+        type: 'object',
+        properties: {
+          sku: {
+            type: 'string',
+            description: 'Target item SKU code (e.g. RET-102, HDW-202, LOG-301, PHM-402)',
+          },
+          domain: {
+            type: 'string',
+            enum: ['retail', 'hardware', 'logistics', 'pharma', 'all'],
+            description: 'Target business domain',
+          },
+          supplierId: {
+            type: 'string',
+            description: 'Supplier ID (e.g. SUP-RET-01, SUP-HDW-01)',
+          },
+          quantity: {
+            type: 'number',
+            description: 'Units quantity to purchase',
+          },
+          priority: {
+            type: 'string',
+            enum: ['standard', 'expedited', 'critical'],
+            description: 'Fulfillment priority rating (standard, expedited, critical)',
+          },
+          notes: {
+            type: 'string',
+            description: 'Purchase justification or operational note',
+          },
+        },
+      },
+      handler: async (args: {
+        sku?: string;
+        domain?: BusinessDomain;
+        supplierId?: string;
+        quantity?: number;
+        priority?: ReorderPriority;
+        notes?: string;
+      }) => {
+        this.activeTab.set('inventory');
+        this.isPurchaseModalOpen.set(true);
+
+        const currentForm = this.purchaseForm();
+        const allItems = this.dataService.inventory();
+        const targetItem = args.sku
+          ? allItems.find((i) => i.sku.toLowerCase() === args.sku!.toLowerCase())
+          : this.selectedPurchaseItem();
+
+        const updatedDomain = args.domain || (targetItem ? targetItem.domain : currentForm.domain);
+        const updatedSku = targetItem ? targetItem.sku : (args.sku || currentForm.sku);
+        const updatedSupplierId = args.supplierId || (targetItem ? targetItem.supplier.id : currentForm.supplierId);
+        const updatedQuantity = args.quantity && args.quantity > 0 ? args.quantity : currentForm.quantity;
+        const updatedPriority = args.priority || currentForm.priority;
+        const updatedNotes = args.notes !== undefined ? args.notes : currentForm.notes;
+
+        this.purchaseForm.set({
+          domain: updatedDomain,
+          sku: updatedSku,
+          supplierId: updatedSupplierId,
+          quantity: updatedQuantity,
+          priority: updatedPriority,
+          notes: updatedNotes,
+        });
+
+        this.isAutoFilled.set(true);
+        const filledFields = Object.keys(args).filter((k) => (args as any)[k] !== undefined);
+        this.lastAutoFilledField.set(filledFields.join(', '));
+
+        const feedback = `Autofilled purchase order form: SKU ${updatedSku}, Qty ${updatedQuantity}, Priority ${updatedPriority}`;
+        this.lastActionResult.set(feedback);
+
+        return {
+          success: true,
+          form: this.purchaseForm(),
+          selectedItem: this.selectedPurchaseItem(),
+          selectedSupplier: this.selectedPurchaseSupplier(),
+          subtotal: this.calculatedSubtotal(),
+          totalCost: this.calculatedTotalCost(),
+          estimatedArrival: this.calculatedArrivalDate(),
+        };
+      },
+    });
+
+    // 12. submit_purchase_order
+    this.webmcp.registerTool({
+      name: 'submit_purchase_order',
+      description: 'Submit and confirm the active purchase order, generating an official procurement order receipt, updating replenishment status, and logging to audit trail.',
+      parameters: {
+        type: 'object',
+        properties: {
+          sku: {
+            type: 'string',
+            description: 'Item SKU code to purchase (defaults to active form SKU if omitted)',
+          },
+          quantity: {
+            type: 'number',
+            description: 'Units quantity to purchase (defaults to active form quantity if omitted)',
+          },
+          priority: {
+            type: 'string',
+            enum: ['standard', 'expedited', 'critical'],
+            description: 'Fulfillment priority rating (defaults to active form priority if omitted)',
+          },
+          supplierId: {
+            type: 'string',
+            description: 'Supplier ID (defaults to item default supplier if omitted)',
+          },
+          notes: {
+            type: 'string',
+            description: 'Optional purchase justification or note',
+          },
+        },
+      },
+      handler: async (args: {
+        sku?: string;
+        quantity?: number;
+        priority?: ReorderPriority;
+        supplierId?: string;
+        notes?: string;
+      }) => {
+        const form = this.purchaseForm();
+        const sku = args.sku || form.sku;
+        const quantity = args.quantity && args.quantity > 0 ? args.quantity : form.quantity;
+        const priority = args.priority || form.priority;
+        const supplierId = args.supplierId || form.supplierId;
+        const notes = args.notes !== undefined ? args.notes : form.notes;
+
+        if (!sku) {
+          return { success: false, error: 'SKU is required to submit a purchase order.' };
+        }
+
+        const result = this.dataService.reorderItem(sku, quantity, priority, supplierId, notes);
+        if (!result.success) {
+          return { success: false, error: result.error };
+        }
+
+        this.activeTab.set('inventory');
+        this.isPurchaseModalOpen.set(true);
+        this.purchaseModalSuccessReceipt.set(result.receipt || null);
+
+        const feedback = `Purchase order confirmed: ${result.receipt?.reorderId} (${quantity} units of ${sku})`;
+        this.lastActionResult.set(feedback);
+
+        return {
+          success: true,
+          receipt: result.receipt,
+          orderId: result.receipt?.reorderId,
+          sku,
+          quantity,
+          priority,
+          totalCost: result.receipt?.totalCost,
+          estimatedArrival: result.receipt?.estimatedArrival,
+        };
+      },
+    });
+
+    // 13. close_purchase_order_modal
+    this.webmcp.registerTool({
+      name: 'close_purchase_order_modal',
+      description: 'Close the purchase order modal.',
+      parameters: {
+        type: 'object',
+        properties: {},
+      },
+      handler: async () => {
+        this.closePurchaseModal();
+        this.lastActionResult.set('Closed purchase order modal');
+        return {
+          success: true,
+          isOpen: false,
+        };
+      },
+    });
   }
 
   private unregisterEnterpriseWebMcpTools(): void {
@@ -1222,6 +1916,166 @@ export class EnterpriseBiComponent implements OnInit, OnDestroy {
     this.webmcp.unregisterTool('reorder_inventory_item');
     this.webmcp.unregisterTool('filter_inventory_by_domain');
     this.webmcp.unregisterTool('get_business_domain_summary');
+    this.webmcp.unregisterTool('open_purchase_order_modal');
+    this.webmcp.unregisterTool('fill_purchase_order_form');
+    this.webmcp.unregisterTool('submit_purchase_order');
+    this.webmcp.unregisterTool('close_purchase_order_modal');
+  }
+
+  // --- Purchase Order Modal & Replenishment Handlers ---
+  openPurchaseModal(
+    sku?: string,
+    domain?: BusinessDomain,
+    quantity?: number,
+    priority?: ReorderPriority,
+    notes?: string
+  ): void {
+    this.activeTab.set('inventory');
+    this.purchaseModalSuccessReceipt.set(null);
+    this.isAutoFilled.set(false);
+    this.lastAutoFilledField.set(null);
+
+    const allItems = this.dataService.inventory();
+    let targetItem = sku
+      ? allItems.find((i) => i.sku.toLowerCase() === sku.toLowerCase())
+      : undefined;
+
+    if (!targetItem) {
+      targetItem =
+        allItems.find((i) => i.status === 'out_of_stock' || i.status === 'low_stock') ||
+        allItems[0];
+    }
+
+    const itemDomain = domain || targetItem?.domain || 'all';
+    const itemSku = targetItem?.sku || '';
+    const itemSupplierId = targetItem?.supplier?.id || '';
+    const itemQty =
+      quantity && quantity > 0
+        ? quantity
+        : targetItem
+        ? Math.max(10, targetItem.maxCapacity - targetItem.stockLevel)
+        : 25;
+    const itemPriority =
+      priority ||
+      (targetItem?.status === 'out_of_stock'
+        ? 'critical'
+        : targetItem?.status === 'low_stock'
+        ? 'expedited'
+        : 'standard');
+
+    this.purchaseForm.set({
+      domain: itemDomain,
+      sku: itemSku,
+      supplierId: itemSupplierId,
+      quantity: itemQty,
+      priority: itemPriority,
+      notes: notes || '',
+    });
+
+    this.isPurchaseModalOpen.set(true);
+  }
+
+  closePurchaseModal(): void {
+    this.isPurchaseModalOpen.set(false);
+    this.isAutoFilled.set(false);
+    this.lastAutoFilledField.set(null);
+    this.purchaseModalSuccessReceipt.set(null);
+  }
+
+  onPurchaseDomainChange(domain: BusinessDomain): void {
+    this.purchaseForm.update((f) => {
+      const all = this.dataService.inventory();
+      const skus = domain === 'all' ? all : all.filter((i) => i.domain === domain);
+      const currentValid = skus.some((i) => i.sku === f.sku);
+      const newSku = currentValid ? f.sku : skus[0]?.sku || '';
+      const item = all.find((i) => i.sku === newSku);
+      return {
+        ...f,
+        domain,
+        sku: newSku,
+        supplierId: item?.supplier?.id || f.supplierId,
+      };
+    });
+  }
+
+  onPurchaseSkuChange(sku: string): void {
+    const item = this.dataService.inventory().find((i) => i.sku === sku);
+    this.purchaseForm.update((f) => ({
+      ...f,
+      sku,
+      supplierId: item?.supplier?.id || f.supplierId,
+      domain: item ? item.domain : f.domain,
+    }));
+  }
+
+  onPurchaseSupplierChange(supplierId: string): void {
+    this.purchaseForm.update((f) => ({ ...f, supplierId }));
+  }
+
+  setPurchasePriority(priority: ReorderPriority): void {
+    this.purchaseForm.update((f) => ({ ...f, priority }));
+  }
+
+  setPurchaseQuantity(qty: number): void {
+    const valid = Math.max(1, Math.floor(Number(qty) || 1));
+    this.purchaseForm.update((f) => ({ ...f, quantity: valid }));
+  }
+
+  adjustPurchaseQuantity(delta: number): void {
+    this.purchaseForm.update((f) => ({
+      ...f,
+      quantity: Math.max(1, f.quantity + delta),
+    }));
+  }
+
+  setPurchaseNotes(notes: string): void {
+    this.purchaseForm.update((f) => ({ ...f, notes }));
+  }
+
+  autoFillSuggestedReplenishment(): void {
+    const item = this.selectedPurchaseItem();
+    if (!item) return;
+
+    const deficit = Math.max(10, item.maxCapacity - item.stockLevel);
+    const priority: ReorderPriority =
+      item.status === 'out_of_stock'
+        ? 'critical'
+        : item.status === 'low_stock'
+        ? 'expedited'
+        : 'standard';
+
+    this.purchaseForm.update((f) => ({
+      ...f,
+      quantity: deficit,
+      priority,
+      supplierId: item.supplier.id,
+      notes: `Replenishment deficit optimization (+${deficit} units)`,
+    }));
+
+    this.isAutoFilled.set(true);
+    this.lastAutoFilledField.set('Quantity, Priority, Supplier, Notes');
+  }
+
+  submitPurchaseOrderForm(): void {
+    const form = this.purchaseForm();
+    if (!form.sku || form.quantity <= 0) return;
+
+    const result = this.dataService.reorderItem(
+      form.sku,
+      form.quantity,
+      form.priority,
+      form.supplierId,
+      form.notes
+    );
+
+    if (result.success && result.receipt) {
+      this.purchaseModalSuccessReceipt.set(result.receipt);
+      this.lastActionResult.set(
+        `Purchase order issued: ${result.receipt.reorderId} (${form.quantity}x ${form.sku})`
+      );
+    } else {
+      this.lastActionResult.set(`Failed to issue order: ${result.error}`);
+    }
   }
 
   // --- Sub-Navigation & Filter Helpers ---

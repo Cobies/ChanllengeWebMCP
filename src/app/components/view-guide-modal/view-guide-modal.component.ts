@@ -301,8 +301,23 @@ import { CopilotBridgeService } from '../../services/copilot-bridge.service';
                         </tr>
                         <tr>
                           <td class="p-2.5 font-mono font-bold text-blue-700">reorder_inventory_item</td>
-                          <td class="p-2.5 font-mono text-[11px]">itemId, quantity, priority</td>
+                          <td class="p-2.5 font-mono text-[11px]">sku, quantity, priority</td>
                           <td class="p-2.5 text-slate-600">Dispatches replenishment purchase orders with priority routing.</td>
+                        </tr>
+                        <tr>
+                          <td class="p-2.5 font-mono font-bold text-blue-700">open_purchase_order_modal</td>
+                          <td class="p-2.5 font-mono text-[11px]">sku?, domain?, quantity?, priority?</td>
+                          <td class="p-2.5 text-slate-600">Opens the interactive procurement modal in inventory workspace prefilling optional details.</td>
+                        </tr>
+                        <tr>
+                          <td class="p-2.5 font-mono font-bold text-blue-700">fill_purchase_order_form</td>
+                          <td class="p-2.5 font-mono text-[11px]">sku?, supplierId?, quantity?, priority?, notes?</td>
+                          <td class="p-2.5 text-slate-600">Autofills and controls the purchase order form selects and input fields in real-time.</td>
+                        </tr>
+                        <tr>
+                          <td class="p-2.5 font-mono font-bold text-blue-700">submit_purchase_order</td>
+                          <td class="p-2.5 font-mono text-[11px]">sku?, quantity?, priority?, notes?</td>
+                          <td class="p-2.5 text-slate-600">Confirms and dispatches the purchase order, generating a verifiable procurement receipt.</td>
                         </tr>
                       </tbody>
                     </table>
@@ -322,9 +337,17 @@ import { CopilotBridgeService } from '../../services/copilot-bridge.service';
                       </button>
                     </div>
                     <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
-                      <span class="text-slate-700 font-mono text-[11px]">"Check items in manufacturing domain with low stock, and trigger an urgent reorder of 50 units."</span>
+                      <span class="text-slate-700 font-mono text-[11px]">"Open the purchase order modal for SKU RET-102 with 45 units and expedited priority."</span>
                       <button
-                        (click)="runPrompt('Query inventory for manufacturing domain, find low stock items, and reorder 50 units with urgent priority.')"
+                        (click)="runPrompt('Open the purchase order modal for SKU RET-102 with 45 units and expedited priority.')"
+                        class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold shrink-0 transition-colors shadow-2xs cursor-pointer">
+                        Run in Copilot 🤖
+                      </button>
+                    </div>
+                    <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
+                      <span class="text-slate-700 font-mono text-[11px]">"Autofill the purchase order form for SKU RET-103 with quantity 100 and critical priority."</span>
+                      <button
+                        (click)="runPrompt('Autofill the purchase order form for SKU RET-103 with quantity 100, critical priority, and justification notes.')"
                         class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold shrink-0 transition-colors shadow-2xs cursor-pointer">
                         Run in Copilot 🤖
                       </button>

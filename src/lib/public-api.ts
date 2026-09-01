@@ -29,3 +29,7 @@ export { WebmcpThreeSceneBridge as WebMcpThreeSceneBridge } from './three/three-
 export * from './forms/form-runner.service';
 export * from './forms/form-registry';
 export { WebmcpFormRunnerService as WebMcpFormRunnerService } from './forms/form-runner.service';
+
+// SubAgents SDK
+export * from './subagents';
+

@@ -891,6 +891,16 @@ export class EnterpriseDataService {
     );
   });
 
+  readonly allSuppliers = computed<InventorySupplier[]>(() => {
+    const map = new Map<string, InventorySupplier>();
+    for (const item of this.inventory()) {
+      if (item.supplier && !map.has(item.supplier.id)) {
+        map.set(item.supplier.id, item.supplier);
+      }
+    }
+    return Array.from(map.values());
+  });
+
   // --- Actions & Methods ---
   updateFilter(partial: Partial<BiFilterState>): void {
     this.filterState.update((current) => ({
@@ -1080,7 +1090,9 @@ export class EnterpriseDataService {
   reorderItem(
     sku: string,
     quantity: number,
-    priority: ReorderPriority = 'standard'
+    priority: ReorderPriority = 'standard',
+    supplierId?: string,
+    notes?: string
   ): {
     success: boolean;
     receipt?: ReorderReceipt;
@@ -1097,8 +1109,9 @@ export class EnterpriseDataService {
       return { success: false, error: 'Reorder quantity must be greater than 0.' };
     }
 
+    const supplier = (supplierId && this.allSuppliers().find((s) => s.id === supplierId)) || item.supplier;
     const leadFactor = priority === 'critical' ? 0.33 : priority === 'expedited' ? 0.5 : 1.0;
-    const leadDays = Math.max(1, Math.ceil(item.supplier.leadTimeDays * leadFactor));
+    const leadDays = Math.max(1, Math.ceil(supplier.leadTimeDays * leadFactor));
     const arrivalDate = new Date(Date.now() + leadDays * 86400000).toISOString();
     const costMultiplier = priority === 'critical' ? 1.25 : priority === 'expedited' ? 1.1 : 1.0;
     const totalCost = Math.round(quantity * item.unitPrice * costMultiplier * 100) / 100;
@@ -1109,10 +1122,11 @@ export class EnterpriseDataService {
       sku: item.sku,
       quantity,
       priority,
-      supplier: item.supplier,
+      supplier,
       estimatedArrival: arrivalDate,
       totalCost,
       orderedAt: new Date().toISOString(),
+      notes,
     };
 
     this.reorderLog.update((logs) => [receipt, ...logs]);

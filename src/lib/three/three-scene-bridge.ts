@@ -62,6 +62,7 @@ export class WebmcpThreeSceneBridge {
 
   private selectedObject: THREE.Object3D | null = null;
   private customObjectCounter = 1;
+  private toolsRegistered = false;
 
   // Reactive State Signals for Direct UI Binding
   readonly selectedNode = signal<StudioSceneNode | null>(null);
@@ -118,6 +119,7 @@ export class WebmcpThreeSceneBridge {
   unbindScene(): void {
     this.selectedObject = null;
     this.selectedNode.set(null);
+    this.sceneNodes.set([]);
     this.contextRef = null;
   }
 
@@ -250,6 +252,11 @@ export class WebmcpThreeSceneBridge {
   // =========================================================================
 
   public registerAllTools(): void {
+    if (this.toolsRegistered) {
+      return;
+    }
+    this.toolsRegistered = true;
+
     // 1. studio_create_object
     this.webmcp.registerTool({
       name: 'studio_create_object',
@@ -341,7 +348,8 @@ export class WebmcpThreeSceneBridge {
           },
           material: {
             type: 'object',
-            description: 'PBR physical material properties (color, metalness, roughness, transmission, emissive, opacity, wireframe)',
+            description:
+              'PBR physical material properties (color, metalness, roughness, transmission, emissive, opacity, wireframe)',
             properties: {
               color: { type: 'string' },
               metalness: { type: 'number' },
@@ -405,7 +413,8 @@ export class WebmcpThreeSceneBridge {
           },
           relative: {
             type: 'boolean',
-            description: 'If true, adds delta values relative to current transform instead of absolute set',
+            description:
+              'If true, adds delta values relative to current transform instead of absolute set',
           },
         },
       },
@@ -611,7 +620,8 @@ export class WebmcpThreeSceneBridge {
           },
           dimensions: {
             type: 'object',
-            description: 'Metric dimensions for the 2D shape (width, length, radius, wallThickness, points)',
+            description:
+              'Metric dimensions for the 2D shape (width, length, radius, wallThickness, points)',
             properties: {
               width: { type: 'number' },
               length: { type: 'number' },
@@ -864,6 +874,7 @@ export class WebmcpThreeSceneBridge {
    * Cleanly unregister all 3D DCC and CAD tools from WebMcpService.
    */
   public unregisterAllTools(): void {
+    this.toolsRegistered = false;
     const tools = [
       'studio_create_object',
       'studio_transform_object',
@@ -943,7 +954,12 @@ export class WebmcpThreeSceneBridge {
         break;
       }
       case 'cylinder': {
-        const geo = new THREE.CylinderGeometry(dim.radius || 0.6, dim.radius || 0.6, dim.height || 1.4, 32);
+        const geo = new THREE.CylinderGeometry(
+          dim.radius || 0.6,
+          dim.radius || 0.6,
+          dim.height || 1.4,
+          32,
+        );
         object3D = new THREE.Mesh(geo, material);
         break;
       }
@@ -987,7 +1003,9 @@ export class WebmcpThreeSceneBridge {
       }
       case 'light': {
         const lightGroup = new THREE.Group();
-        const lightColor = params.lightColor ? new THREE.Color(params.lightColor) : new THREE.Color(0x00f0ff);
+        const lightColor = params.lightColor
+          ? new THREE.Color(params.lightColor)
+          : new THREE.Color(0x00f0ff);
         const intensity = params.lightIntensity ?? 2.0;
 
         let light: THREE.Light;
@@ -1060,11 +1078,7 @@ export class WebmcpThreeSceneBridge {
 
     // Apply Position
     if (params.position) {
-      object3D.position.set(
-        params.position.x ?? 0,
-        params.position.y ?? 0,
-        params.position.z ?? 0
-      );
+      object3D.position.set(params.position.x ?? 0, params.position.y ?? 0, params.position.z ?? 0);
     } else {
       object3D.position.set(0, 1, 0);
     }
@@ -1074,7 +1088,7 @@ export class WebmcpThreeSceneBridge {
       object3D.rotation.set(
         ((params.rotation.x ?? 0) * Math.PI) / 180,
         ((params.rotation.y ?? 0) * Math.PI) / 180,
-        ((params.rotation.z ?? 0) * Math.PI) / 180
+        ((params.rotation.z ?? 0) * Math.PI) / 180,
       );
     }
 
@@ -1083,11 +1097,7 @@ export class WebmcpThreeSceneBridge {
       if (typeof params.scale === 'number') {
         object3D.scale.set(params.scale, params.scale, params.scale);
       } else {
-        object3D.scale.set(
-          params.scale.x ?? 1,
-          params.scale.y ?? 1,
-          params.scale.z ?? 1
-        );
+        object3D.scale.set(params.scale.x ?? 1, params.scale.y ?? 1, params.scale.z ?? 1);
       }
     }
 
@@ -1267,7 +1277,8 @@ export class WebmcpThreeSceneBridge {
               : Boolean('transmission' in m && (m as any).transmission > 0);
           const currentOpacity = matConfig.opacity !== undefined ? matConfig.opacity : m.opacity;
           m.transparent =
-            matConfig.transparent ?? (hasTransmission || (currentOpacity !== undefined && currentOpacity < 1.0));
+            matConfig.transparent ??
+            (hasTransmission || (currentOpacity !== undefined && currentOpacity < 1.0));
           m.needsUpdate = true;
         });
       }
@@ -1479,7 +1490,12 @@ export class WebmcpThreeSceneBridge {
 
       case 'reset_scene': {
         await this.manageHierarchy({ action: 'clear_custom' });
-        await this.setViewport({ shadingMode: 'pbr', cameraView: 'perspective', showGrid: true, showShadows: true });
+        await this.setViewport({
+          shadingMode: 'pbr',
+          cameraView: 'perspective',
+          showGrid: true,
+          showShadows: true,
+        });
         await this.executeSceneAction({ action: 'reset_camera', durationMs: 400 });
         return {
           success: true,
@@ -1557,7 +1573,11 @@ export class WebmcpThreeSceneBridge {
             camera.position.set(state.position.x, state.position.y, state.position.z);
             camera.lookAt(state.target.x, state.target.y, state.target.z);
             if (this.contextRef?.orbitControls?.target) {
-              this.contextRef.orbitControls.target.set(state.target.x, state.target.y, state.target.z);
+              this.contextRef.orbitControls.target.set(
+                state.target.x,
+                state.target.y,
+                state.target.z,
+              );
               this.contextRef.orbitControls.update?.();
             }
           },
@@ -1567,7 +1587,7 @@ export class WebmcpThreeSceneBridge {
               this.contextRef.orbitControls.update?.();
             }
             resolve();
-          }
+          },
         );
       });
     }
@@ -1632,24 +1652,31 @@ export class WebmcpThreeSceneBridge {
         onerror: ((err: any) => void) | null = null;
 
         readAsArrayBuffer(blob: Blob) {
-          blob.arrayBuffer().then((buf) => {
-            this.result = buf;
-            setTimeout(() => {
-              this.onload?.();
-              this.onloadend?.();
-            }, 0);
-          }).catch((err) => this.onerror?.(err));
+          blob
+            .arrayBuffer()
+            .then((buf) => {
+              this.result = buf;
+              setTimeout(() => {
+                this.onload?.();
+                this.onloadend?.();
+              }, 0);
+            })
+            .catch((err) => this.onerror?.(err));
         }
 
         readAsDataURL(blob: Blob) {
-          blob.arrayBuffer().then((buf) => {
-            const base64 = typeof Buffer !== 'undefined' ? Buffer.from(buf).toString('base64') : '';
-            this.result = `data:${blob.type || 'application/octet-stream'};base64,${base64}`;
-            setTimeout(() => {
-              this.onload?.();
-              this.onloadend?.();
-            }, 0);
-          }).catch((err) => this.onerror?.(err));
+          blob
+            .arrayBuffer()
+            .then((buf) => {
+              const base64 =
+                typeof Buffer !== 'undefined' ? Buffer.from(buf).toString('base64') : '';
+              this.result = `data:${blob.type || 'application/octet-stream'};base64,${base64}`;
+              setTimeout(() => {
+                this.onload?.();
+                this.onloadend?.();
+              }, 0);
+            })
+            .catch((err) => this.onerror?.(err));
         }
       };
     }
@@ -1684,7 +1711,8 @@ export class WebmcpThreeSceneBridge {
               data: {
                 filename,
                 format: isBinary ? 'glb' : 'gltf',
-                sizeBytes: result instanceof ArrayBuffer ? result.byteLength : JSON.stringify(result).length,
+                sizeBytes:
+                  result instanceof ArrayBuffer ? result.byteLength : JSON.stringify(result).length,
               },
               message: `Successfully exported ${params.target || 'scene'} as ${filename}`,
             });
@@ -1696,7 +1724,7 @@ export class WebmcpThreeSceneBridge {
               message: `GLTF Export error: ${error}`,
             });
           },
-          { binary: isBinary }
+          { binary: isBinary },
         );
       } catch (err: any) {
         resolve({
@@ -1741,7 +1769,7 @@ export class WebmcpThreeSceneBridge {
           targetPos,
           deltaThetaRad,
           deltaPhiRad,
-          zoom
+          zoom,
         );
 
         await new Promise<void>((resolve) => {
@@ -1753,7 +1781,11 @@ export class WebmcpThreeSceneBridge {
               camera.position.set(state.position.x, state.position.y, state.position.z);
               camera.lookAt(state.target.x, state.target.y, state.target.z);
               if (this.contextRef?.orbitControls?.target) {
-                this.contextRef.orbitControls.target.set(state.target.x, state.target.y, state.target.z);
+                this.contextRef.orbitControls.target.set(
+                  state.target.x,
+                  state.target.y,
+                  state.target.z,
+                );
                 this.contextRef.orbitControls.update?.();
               }
             },
@@ -1763,13 +1795,13 @@ export class WebmcpThreeSceneBridge {
                 this.contextRef.orbitControls.update?.();
               }
               resolve();
-            }
+            },
           );
         });
 
         return this.buildLegacyResult(
           params.action,
-          `Camera orbit updated: deltaX=${params.deltaX ?? 0}°, deltaY=${params.deltaY ?? 0}°, zoom=${zoom}`
+          `Camera orbit updated: deltaX=${params.deltaX ?? 0}°, deltaY=${params.deltaY ?? 0}°, zoom=${zoom}`,
         );
       }
 
@@ -1786,7 +1818,11 @@ export class WebmcpThreeSceneBridge {
               camera.position.set(state.position.x, state.position.y, state.position.z);
               camera.lookAt(state.target.x, state.target.y, state.target.z);
               if (this.contextRef?.orbitControls?.target) {
-                this.contextRef.orbitControls.target.set(state.target.x, state.target.y, state.target.z);
+                this.contextRef.orbitControls.target.set(
+                  state.target.x,
+                  state.target.y,
+                  state.target.z,
+                );
                 this.contextRef.orbitControls.update?.();
               }
             },
@@ -1795,18 +1831,18 @@ export class WebmcpThreeSceneBridge {
                 this.contextRef.orbitControls.target.set(
                   this.defaultCameraState.target.x,
                   this.defaultCameraState.target.y,
-                  this.defaultCameraState.target.z
+                  this.defaultCameraState.target.z,
                 );
                 this.contextRef.orbitControls.update?.();
               }
               resolve();
-            }
+            },
           );
         });
 
         return this.buildLegacyResult(
           'reset_camera',
-          'Camera position and orientation smoothly reset to default'
+          'Camera position and orientation smoothly reset to default',
         );
       }
 
@@ -1838,7 +1874,7 @@ export class WebmcpThreeSceneBridge {
 
         return this.buildLegacyResult(
           'change_mesh_color',
-          `Material color for mesh '${params.meshName}' updated to ${params.hexColor}`
+          `Material color for mesh '${params.meshName}' updated to ${params.hexColor}`,
         );
       }
 
@@ -1871,14 +1907,14 @@ export class WebmcpThreeSceneBridge {
 
         return this.buildLegacyResult(
           'highlight_part',
-          `Emphasized part '${params.meshName}' with emissive highlight`
+          `Emphasized part '${params.meshName}' with emissive highlight`,
         );
       }
 
       case 'play_animation': {
         return this.buildLegacyResult(
           'play_animation',
-          `Animation '${params.clipName || 'default'}' triggered`
+          `Animation '${params.clipName || 'default'}' triggered`,
         );
       }
 
@@ -1893,7 +1929,8 @@ export class WebmcpThreeSceneBridge {
 
   private extractNodeMetadata(obj: THREE.Object3D): StudioSceneNode {
     let type = (obj.userData['primitiveType'] as string) || obj.type;
-    let matConfig: StudioMaterialConfig | undefined = obj.userData['materialConfig'] as StudioMaterialConfig | undefined;
+    let matConfig: StudioMaterialConfig | undefined = obj.userData['materialConfig'] as
+      StudioMaterialConfig | undefined;
 
     if (!matConfig && obj instanceof THREE.Mesh && obj.material) {
       const mat = Array.isArray(obj.material) ? obj.material[0] : obj.material;
@@ -1948,7 +1985,8 @@ export class WebmcpThreeSceneBridge {
   private isEditorHelper(obj: THREE.Object3D): boolean {
     if (!obj) return false;
     if (obj instanceof THREE.GridHelper || obj instanceof THREE.BoxHelper) return true;
-    if ((obj as any).isTransformControls || (obj as any).isHelper || (obj as any).isLightHelper) return true;
+    if ((obj as any).isTransformControls || (obj as any).isHelper || (obj as any).isLightHelper)
+      return true;
     const type = obj.type || '';
     const name = obj.name || '';
     if (
@@ -1988,12 +2026,12 @@ export class WebmcpThreeSceneBridge {
   public animateSpawnPopIn(
     object3D: THREE.Object3D,
     targetScale?: THREE.Vector3 | number,
-    durationMs = 250
+    durationMs = 250,
   ): Promise<void> {
     const finalScale = new THREE.Vector3(
       typeof targetScale === 'number' ? targetScale : (targetScale?.x ?? object3D.scale.x ?? 1),
       typeof targetScale === 'number' ? targetScale : (targetScale?.y ?? object3D.scale.y ?? 1),
-      typeof targetScale === 'number' ? targetScale : (targetScale?.z ?? object3D.scale.z ?? 1)
+      typeof targetScale === 'number' ? targetScale : (targetScale?.z ?? object3D.scale.z ?? 1),
     );
 
     const isHeadless =
@@ -2019,7 +2057,7 @@ export class WebmcpThreeSceneBridge {
         object3D.scale.set(
           finalScale.x * Math.max(0.001, ease),
           finalScale.y * Math.max(0.001, ease),
-          finalScale.z * Math.max(0.001, ease)
+          finalScale.z * Math.max(0.001, ease),
         );
 
         if (progress < 1.0) {
@@ -2058,21 +2096,14 @@ export class WebmcpThreeSceneBridge {
     if (!material) return;
     for (const key of Object.keys(material)) {
       const value = (material as any)[key];
-      if (
-        value &&
-        typeof value === 'object' &&
-        typeof value.dispose === 'function'
-      ) {
+      if (value && typeof value === 'object' && typeof value.dispose === 'function') {
         value.dispose();
       }
     }
     material.dispose();
   }
 
-  private buildLegacyResult(
-    action: Scene3DActionType,
-    message: string
-  ): Scene3DActionResult {
+  private buildLegacyResult(action: Scene3DActionType, message: string): Scene3DActionResult {
     const cam = this.contextRef?.camera;
     return {
       success: true,
@@ -2150,7 +2181,7 @@ export class WebmcpThreeSceneBridge {
 
   public createPresetMaterial(
     preset: CadMaterialPreset,
-    custom?: Partial<StudioMaterialConfig>
+    custom?: Partial<StudioMaterialConfig>,
   ): THREE.Material {
     const base = this.getPresetMaterialConfig(preset);
     const cfg = { ...base, ...custom };
@@ -2205,7 +2236,7 @@ export class WebmcpThreeSceneBridge {
         const edges = new THREE.EdgesGeometry(geo);
         const line = new THREE.LineSegments(
           edges,
-          new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 2 })
+          new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 2 }),
         );
         mesh.add(line);
 
@@ -2223,7 +2254,7 @@ export class WebmcpThreeSceneBridge {
         const edges = new THREE.EdgesGeometry(geo);
         const line = new THREE.LineSegments(
           edges,
-          new THREE.LineBasicMaterial({ color: 0x0284c7 })
+          new THREE.LineBasicMaterial({ color: 0x0284c7 }),
         );
         mesh.add(line);
 
@@ -2265,7 +2296,7 @@ export class WebmcpThreeSceneBridge {
             segMesh.position.set(
               ((p1.x ?? 0) + (p2.x ?? 0)) / 2,
               wallHeight / 2,
-              ((p1.z ?? 0) + (p2.z ?? 0)) / 2
+              ((p1.z ?? 0) + (p2.z ?? 0)) / 2,
             );
             segMesh.rotation.y = -Math.atan2(dz, dx);
             segMesh.castShadow = true;
@@ -2278,13 +2309,16 @@ export class WebmcpThreeSceneBridge {
         break;
       }
       case 'polygon': {
-        const pts = (dim.points && dim.points.length >= 3) ? dim.points : [
-          { x: -2, z: -2 },
-          { x: 2, z: -2 },
-          { x: 3, z: 1 },
-          { x: 0, z: 3 },
-          { x: -3, z: 1 },
-        ];
+        const pts =
+          dim.points && dim.points.length >= 3
+            ? dim.points
+            : [
+                { x: -2, z: -2 },
+                { x: 2, z: -2 },
+                { x: 3, z: 1 },
+                { x: 0, z: 3 },
+                { x: -3, z: 1 },
+              ];
         const shape = new THREE.Shape();
         shape.moveTo(pts[0].x, -(pts[0].z ?? pts[0].y ?? 0));
         for (let i = 1; i < pts.length; i++) {
@@ -2300,7 +2334,7 @@ export class WebmcpThreeSceneBridge {
         const edges = new THREE.EdgesGeometry(geo);
         const line = new THREE.LineSegments(
           edges,
-          new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 2 })
+          new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 2 }),
         );
         mesh.add(line);
 
@@ -2405,7 +2439,11 @@ export class WebmcpThreeSceneBridge {
       roomGroup.add(sWall);
 
       // East & West walls
-      const ewWallGeo = new THREE.BoxGeometry(wallThick, distance, Math.max(0.1, length - 2 * wallThick));
+      const ewWallGeo = new THREE.BoxGeometry(
+        wallThick,
+        distance,
+        Math.max(0.1, length - 2 * wallThick),
+      );
       const eWall = new THREE.Mesh(ewWallGeo, mat);
       eWall.position.set(width / 2 - wallThick / 2, distance / 2, 0);
       eWall.castShadow = true;
@@ -2764,10 +2802,7 @@ export class WebmcpThreeSceneBridge {
           [1.15, 0.35, 1.2],
         ];
         for (const [wx, wy, wz] of wheelPositions) {
-          const wheel = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.35, 0.35, 0.25, 24),
-            wheelMat
-          );
+          const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.25, 24), wheelMat);
           wheel.rotation.z = Math.PI / 2;
           wheel.position.set(wx, wy, wz);
           wheel.castShadow = true;
@@ -3032,4 +3067,3 @@ export class WebmcpThreeSceneBridge {
     };
   }
 }
-

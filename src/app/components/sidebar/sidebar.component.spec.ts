@@ -71,7 +71,7 @@ describe('SidebarComponent (Modular WebMCP Workspace Navigation Hub)', () => {
       expect(showroomCounts).toEqual({ active: 1, total: 2 });
 
       const biCounts = component.getToolCount('view-enterprise-bi');
-      expect(biCounts).toEqual({ active: 1, total: 9 });
+      expect(biCounts).toEqual({ active: 1, total: 13 });
 
       const judgeCounts = component.getToolCount('view-judge-guide');
       expect(judgeCounts).toEqual({ active: 0, total: 2 });

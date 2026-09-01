@@ -1,0 +1,53 @@
+# openspec/config.yaml
+schema: spec-driven
+
+context: |
+  Angular 22 WebMCP Toolkit & 3D Interactive Showcase repository.
+  Contains @cobies/webmcp-angular SDK with reactive signal-first APIs,
+  enterprise BI modules, and declarative WebMCP tool bindings.
+  Zoneless change detection, Three.js 3D viewport, and SSR with Express 5.
+
+strict_tdd: true
+
+testing:
+  strict_tdd: true
+  projects:
+    - path: "."
+      stack: "Angular 22 / TypeScript ~6.0.2 / Tailwind CSS 4 / Bun 1.4.0"
+      test_command: "bun test"
+      coverage_command: "bun test --coverage"
+      framework: "Bun Test (Vitest compatible)"
+      layers:
+        unit: true
+        integration: true
+        e2e: false
+      quality:
+        linter: ""
+        type_checker: "ng build"
+        formatter: "prettier"
+
+rules:
+  proposal:
+    review_budget_lines: 400
+    - Include rollback plan for risky changes
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+  tasks:
+    default_delivery_strategy: "ask-on-risk"
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+  apply:
+    guidelines:
+      - Follow existing code patterns
+    tdd: true
+    test_command: "bun test"
+  verify:
+    test_command: "bun test"
+    build_command: "ng build"
+    coverage_threshold: 80
+  archive:
+    - Warn before merging destructive deltas

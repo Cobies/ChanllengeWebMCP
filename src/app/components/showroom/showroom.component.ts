@@ -17,6 +17,7 @@ import { JudgeGuideComponent } from '../judge-guide/judge-guide.component';
 @Component({
   selector: 'app-showroom',
   standalone: true,
+  host: { class: 'w-full h-full flex-1 flex flex-col min-h-0 overflow-hidden' },
   imports: [
     CommonModule,
     Visualizer3dComponent,

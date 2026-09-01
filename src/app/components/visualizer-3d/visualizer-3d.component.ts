@@ -1,10 +1,10 @@
 import {
   Component,
-  ElementRef,
+  type ElementRef,
   ViewChild,
-  OnInit,
-  AfterViewInit,
-  OnDestroy,
+  type OnInit,
+  type AfterViewInit,
+  type OnDestroy,
   inject,
   HostListener,
   PLATFORM_ID,
@@ -20,13 +20,13 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import {
   WebmcpThreeSceneBridge,
-  StudioTransformGizmoMode,
-  StudioShadingMode,
-  StudioCameraViewPreset,
+  type StudioTransformGizmoMode,
+  type StudioShadingMode,
+  type StudioCameraViewPreset,
   WebMcpViewportCaptureService,
-  CadActiveTool,
-  CadComponentType,
-  CadMaterialPreset,
+  type CadActiveTool,
+  type CadComponentType,
+  type CadMaterialPreset,
   CadShapeType,
   StudioSceneNode,
 } from '@webmcp/angular';
@@ -34,22 +34,29 @@ import {
 @Component({
   selector: 'app-visualizer-3d',
   standalone: true,
+  host: { class: 'w-full h-full flex-1 flex flex-col min-h-0 overflow-hidden' },
   imports: [CommonModule, FormsModule],
   template: `
     <div
-      [class]="isFullscreen() ? 'fixed inset-0 z-50 h-screen w-screen' : 'relative w-full h-full flex-1 min-h-0 rounded-none border-0 shadow-none'"
-      class="overflow-hidden bg-[#ebe7df] flex flex-col select-none transition-all duration-300 font-sans">
-
-
+      [class]="
+        isFullscreen()
+          ? 'fixed inset-0 z-50 h-screen w-screen'
+          : 'relative w-full h-full flex-1 min-h-0 rounded-none border-0 shadow-none'
+      "
+      class="overflow-hidden bg-[#ebe7df] flex flex-col select-none transition-all duration-300 font-sans"
+    >
       <!-- =====================================================================
            TOP CAD DESKTOP MENU RIBBON
            ===================================================================== -->
-      <header class="h-10 bg-white/95 border-b border-slate-200/90 backdrop-blur-md px-3 flex items-center justify-between gap-2 z-30 select-none flex-shrink-0 text-xs shadow-xs">
-        
+      <header
+        class="h-10 bg-white/95 border-b border-slate-200/90 backdrop-blur-md px-3 flex items-center justify-between gap-2 z-30 select-none flex-shrink-0 text-xs shadow-xs"
+      >
         <!-- Left: App Brand & Desktop Menu Items -->
         <div class="flex items-center gap-2 sm:gap-3">
           <!-- SketchUp Style Logo Badge -->
-          <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-gradient-to-br from-rose-500 via-red-600 to-amber-600 text-white font-black tracking-wider text-[11px] shadow-xs">
+          <div
+            class="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-gradient-to-br from-rose-500 via-red-600 to-amber-600 text-white font-black tracking-wider text-[11px] shadow-xs"
+          >
             <span class="text-sm leading-none">⬡</span>
             <span>SketchUp CAD</span>
           </div>
@@ -58,36 +65,73 @@ import {
           <nav class="hidden md:flex items-center gap-0.5 text-slate-700 font-medium">
             <!-- File Menu Dropdown Trigger -->
             <div class="relative group">
-              <button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">File</button>
-              <div class="absolute left-0 top-full mt-1 hidden group-hover:flex flex-col w-44 bg-white rounded-xl shadow-xl border border-slate-200 p-1 z-50 text-slate-700">
-                <button (click)="newScene()" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between">
-                  <span>New Model</span><span class="text-slate-400 font-mono text-[10px]">Ctrl+N</span>
+              <button
+                class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors"
+              >
+                File
+              </button>
+              <div
+                class="absolute left-0 top-full mt-1 hidden group-hover:flex flex-col w-44 bg-white rounded-xl shadow-xl border border-slate-200 p-1 z-50 text-slate-700"
+              >
+                <button
+                  (click)="newScene()"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between"
+                >
+                  <span>New Model</span
+                  ><span class="text-slate-400 font-mono text-[10px]">Ctrl+N</span>
                 </button>
-                <button (click)="captureSnapshot()" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between">
-                  <span>Take Snapshot</span><span class="text-slate-400 font-mono text-[10px]">📸</span>
+                <button
+                  (click)="captureSnapshot()"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between"
+                >
+                  <span>Take Snapshot</span
+                  ><span class="text-slate-400 font-mono text-[10px]">📸</span>
                 </button>
-                <button (click)="exportGlb()" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between font-semibold text-cyan-700">
-                  <span>Export GLB</span><span class="text-slate-400 font-mono text-[10px]">💾</span>
+                <button
+                  (click)="exportGlb()"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between font-semibold text-cyan-700"
+                >
+                  <span>Export GLB</span
+                  ><span class="text-slate-400 font-mono text-[10px]">💾</span>
                 </button>
                 <div class="h-[1px] bg-slate-100 my-1"></div>
-                <button (click)="clearScene()" class="px-3 py-1.5 text-left rounded-lg hover:bg-rose-50 text-rose-600 flex items-center justify-between">
-                  <span>Clear All</span><span class="text-slate-400 font-mono text-[10px]">Del</span>
+                <button
+                  (click)="clearScene()"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-rose-50 text-rose-600 flex items-center justify-between"
+                >
+                  <span>Clear All</span
+                  ><span class="text-slate-400 font-mono text-[10px]">Del</span>
                 </button>
               </div>
             </div>
 
             <!-- Edit Menu Dropdown Trigger -->
             <div class="relative group">
-              <button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">Edit</button>
-              <div class="absolute left-0 top-full mt-1 hidden group-hover:flex flex-col w-44 bg-white rounded-xl shadow-xl border border-slate-200 p-1 z-50 text-slate-700">
-                <button (click)="undo()" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between">
+              <button
+                class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors"
+              >
+                Edit
+              </button>
+              <div
+                class="absolute left-0 top-full mt-1 hidden group-hover:flex flex-col w-44 bg-white rounded-xl shadow-xl border border-slate-200 p-1 z-50 text-slate-700"
+              >
+                <button
+                  (click)="undo()"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between"
+                >
                   <span>Undo</span><span class="text-slate-400 font-mono text-[10px]">Ctrl+Z</span>
                 </button>
-                <button (click)="redo()" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between">
+                <button
+                  (click)="redo()"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between"
+                >
                   <span>Redo</span><span class="text-slate-400 font-mono text-[10px]">Ctrl+Y</span>
                 </button>
                 <div class="h-[1px] bg-slate-100 my-1"></div>
-                <button (click)="deleteSelected()" class="px-3 py-1.5 text-left rounded-lg hover:bg-rose-50 text-rose-600 flex items-center justify-between">
+                <button
+                  (click)="deleteSelected()"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-rose-50 text-rose-600 flex items-center justify-between"
+                >
                   <span>Delete</span><span class="text-slate-400 font-mono text-[10px]">Del</span>
                 </button>
               </div>
@@ -95,21 +139,61 @@ import {
 
             <!-- View Menu -->
             <div class="relative group">
-              <button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">View</button>
-              <div class="absolute left-0 top-full mt-1 hidden group-hover:flex flex-col w-48 bg-white rounded-xl shadow-xl border border-slate-200 p-1 z-50 text-slate-700">
-                <button (click)="setCameraPreset('perspective')" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100">Perspective</button>
-                <button (click)="setCameraPreset('top')" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100">Top View (Plan)</button>
-                <button (click)="setCameraPreset('front')" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100">Front View</button>
-                <button (click)="setCameraPreset('side')" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100">Side View</button>
-                <button (click)="setCameraPreset('iso')" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100">Isometric</button>
+              <button
+                class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors"
+              >
+                View
+              </button>
+              <div
+                class="absolute left-0 top-full mt-1 hidden group-hover:flex flex-col w-48 bg-white rounded-xl shadow-xl border border-slate-200 p-1 z-50 text-slate-700"
+              >
+                <button
+                  (click)="setCameraPreset('perspective')"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100"
+                >
+                  Perspective
+                </button>
+                <button
+                  (click)="setCameraPreset('top')"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100"
+                >
+                  Top View (Plan)
+                </button>
+                <button
+                  (click)="setCameraPreset('front')"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100"
+                >
+                  Front View
+                </button>
+                <button
+                  (click)="setCameraPreset('side')"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100"
+                >
+                  Side View
+                </button>
+                <button
+                  (click)="setCameraPreset('iso')"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100"
+                >
+                  Isometric
+                </button>
                 <div class="h-[1px] bg-slate-100 my-1"></div>
-                <button (click)="toggleAxes()" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between">
+                <button
+                  (click)="toggleAxes()"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between"
+                >
                   <span>3-Axis RGB Lines</span><span>{{ showAxes() ? '✓' : '' }}</span>
                 </button>
-                <button (click)="toggleGrid()" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between">
+                <button
+                  (click)="toggleGrid()"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between"
+                >
                   <span>Ground Grid</span><span>{{ showGrid() ? '✓' : '' }}</span>
                 </button>
-                <button (click)="toggleShadows()" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between">
+                <button
+                  (click)="toggleShadows()"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between"
+                >
                   <span>Sun Shadows</span><span>{{ showShadows() ? '✓' : '' }}</span>
                 </button>
               </div>
@@ -117,15 +201,30 @@ import {
 
             <!-- Draw Menu -->
             <div class="relative group">
-              <button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">Draw</button>
-              <div class="absolute left-0 top-full mt-1 hidden group-hover:flex flex-col w-44 bg-white rounded-xl shadow-xl border border-slate-200 p-1 z-50 text-slate-700">
-                <button (click)="setActiveCadTool('line')" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between">
+              <button
+                class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors"
+              >
+                Draw
+              </button>
+              <div
+                class="absolute left-0 top-full mt-1 hidden group-hover:flex flex-col w-44 bg-white rounded-xl shadow-xl border border-slate-200 p-1 z-50 text-slate-700"
+              >
+                <button
+                  (click)="setActiveCadTool('line')"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between"
+                >
                   <span>Line</span><span class="text-slate-400 font-mono text-[10px]">L</span>
                 </button>
-                <button (click)="setActiveCadTool('rectangle')" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between">
+                <button
+                  (click)="setActiveCadTool('rectangle')"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between"
+                >
                   <span>Rectangle</span><span class="text-slate-400 font-mono text-[10px]">R</span>
                 </button>
-                <button (click)="setActiveCadTool('circle')" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between">
+                <button
+                  (click)="setActiveCadTool('circle')"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between"
+                >
                   <span>Circle</span><span class="text-slate-400 font-mono text-[10px]">C</span>
                 </button>
               </div>
@@ -133,25 +232,52 @@ import {
 
             <!-- Tools Menu -->
             <div class="relative group">
-              <button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">Tools</button>
-              <div class="absolute left-0 top-full mt-1 hidden group-hover:flex flex-col w-44 bg-white rounded-xl shadow-xl border border-slate-200 p-1 z-50 text-slate-700">
-                <button (click)="setActiveCadTool('push_pull')" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between font-semibold text-rose-600">
-                  <span>Push / Pull</span><span class="text-slate-400 font-mono text-[10px]">P</span>
+              <button
+                class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors"
+              >
+                Tools
+              </button>
+              <div
+                class="absolute left-0 top-full mt-1 hidden group-hover:flex flex-col w-44 bg-white rounded-xl shadow-xl border border-slate-200 p-1 z-50 text-slate-700"
+              >
+                <button
+                  (click)="setActiveCadTool('push_pull')"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between font-semibold text-rose-600"
+                >
+                  <span>Push / Pull</span
+                  ><span class="text-slate-400 font-mono text-[10px]">P</span>
                 </button>
-                <button (click)="setActiveCadTool('move')" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between">
+                <button
+                  (click)="setActiveCadTool('move')"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between"
+                >
                   <span>Move</span><span class="text-slate-400 font-mono text-[10px]">M</span>
                 </button>
-                <button (click)="setActiveCadTool('rotate')" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between">
+                <button
+                  (click)="setActiveCadTool('rotate')"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between"
+                >
                   <span>Rotate</span><span class="text-slate-400 font-mono text-[10px]">Q</span>
                 </button>
-                <button (click)="setActiveCadTool('scale')" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between">
+                <button
+                  (click)="setActiveCadTool('scale')"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between"
+                >
                   <span>Scale</span><span class="text-slate-400 font-mono text-[10px]">S</span>
                 </button>
-                <button (click)="setActiveCadTool('tape_measure')" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between">
-                  <span>Tape Measure</span><span class="text-slate-400 font-mono text-[10px]">T</span>
+                <button
+                  (click)="setActiveCadTool('tape_measure')"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between"
+                >
+                  <span>Tape Measure</span
+                  ><span class="text-slate-400 font-mono text-[10px]">T</span>
                 </button>
-                <button (click)="setActiveCadTool('paint_bucket')" class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between">
-                  <span>Paint Bucket</span><span class="text-slate-400 font-mono text-[10px]">B</span>
+                <button
+                  (click)="setActiveCadTool('paint_bucket')"
+                  class="px-3 py-1.5 text-left rounded-lg hover:bg-slate-100 flex items-center justify-between"
+                >
+                  <span>Paint Bucket</span
+                  ><span class="text-slate-400 font-mono text-[10px]">B</span>
                 </button>
               </div>
             </div>
@@ -162,57 +288,98 @@ import {
         <div class="hidden lg:flex items-center gap-2 font-mono text-slate-600 text-xs">
           <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
           <span class="font-bold text-slate-800">Untitled Architectural Studio.skp</span>
-          <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 text-[10px]">WebMCP DCC v2.5</span>
+          <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 text-[10px]"
+            >WebMCP DCC v2.5</span
+          >
         </div>
 
         <!-- Right: Quick Action Controls & Fullscreen -->
         <div class="flex items-center gap-1.5">
           <!-- Camera Presets Quick Switch -->
-          <div class="hidden sm:flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+          <div
+            class="hidden sm:flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200"
+          >
             <button
               (click)="setCameraPreset('perspective')"
-              [class]="currentCameraPreset() === 'perspective' ? 'bg-white shadow-xs text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-800'"
-              class="px-2 py-0.5 rounded text-[11px] font-mono transition-all">
+              [class]="
+                currentCameraPreset() === 'perspective'
+                  ? 'bg-white shadow-xs text-slate-900 font-bold'
+                  : 'text-slate-500 hover:text-slate-800'
+              "
+              class="px-2 py-0.5 rounded text-[11px] font-mono transition-all"
+            >
               Persp
             </button>
             <button
               (click)="setCameraPreset('top')"
-              [class]="currentCameraPreset() === 'top' ? 'bg-white shadow-xs text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-800'"
-              class="px-1.5 py-0.5 rounded text-[11px] font-mono transition-all">
+              [class]="
+                currentCameraPreset() === 'top'
+                  ? 'bg-white shadow-xs text-slate-900 font-bold'
+                  : 'text-slate-500 hover:text-slate-800'
+              "
+              class="px-1.5 py-0.5 rounded text-[11px] font-mono transition-all"
+            >
               Top
             </button>
             <button
               (click)="setCameraPreset('front')"
-              [class]="currentCameraPreset() === 'front' ? 'bg-white shadow-xs text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-800'"
-              class="px-1.5 py-0.5 rounded text-[11px] font-mono transition-all">
+              [class]="
+                currentCameraPreset() === 'front'
+                  ? 'bg-white shadow-xs text-slate-900 font-bold'
+                  : 'text-slate-500 hover:text-slate-800'
+              "
+              class="px-1.5 py-0.5 rounded text-[11px] font-mono transition-all"
+            >
               Front
             </button>
             <button
               (click)="setCameraPreset('iso')"
-              [class]="currentCameraPreset() === 'iso' ? 'bg-white shadow-xs text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-800'"
-              class="px-1.5 py-0.5 rounded text-[11px] font-mono transition-all">
+              [class]="
+                currentCameraPreset() === 'iso'
+                  ? 'bg-white shadow-xs text-slate-900 font-bold'
+                  : 'text-slate-500 hover:text-slate-800'
+              "
+              class="px-1.5 py-0.5 rounded text-[11px] font-mono transition-all"
+            >
               Iso
             </button>
           </div>
 
           <!-- Shading Quick Switch -->
-          <div class="hidden md:flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+          <div
+            class="hidden md:flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200"
+          >
             <button
               (click)="setShadingMode('pbr')"
-              [class]="currentShadingMode() === 'pbr' ? 'bg-purple-600 text-white font-bold' : 'text-slate-600 hover:text-slate-900'"
-              class="px-2 py-0.5 rounded text-[11px] transition-all">
+              [class]="
+                currentShadingMode() === 'pbr'
+                  ? 'bg-purple-600 text-white font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              "
+              class="px-2 py-0.5 rounded text-[11px] transition-all"
+            >
               PBR
             </button>
             <button
               (click)="setShadingMode('wireframe')"
-              [class]="currentShadingMode() === 'wireframe' ? 'bg-purple-600 text-white font-bold' : 'text-slate-600 hover:text-slate-900'"
-              class="px-2 py-0.5 rounded text-[11px] transition-all">
+              [class]="
+                currentShadingMode() === 'wireframe'
+                  ? 'bg-purple-600 text-white font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              "
+              class="px-2 py-0.5 rounded text-[11px] transition-all"
+            >
               Wire
             </button>
             <button
               (click)="setShadingMode('solid')"
-              [class]="currentShadingMode() === 'solid' ? 'bg-purple-600 text-white font-bold' : 'text-slate-600 hover:text-slate-900'"
-              class="px-2 py-0.5 rounded text-[11px] transition-all">
+              [class]="
+                currentShadingMode() === 'solid'
+                  ? 'bg-purple-600 text-white font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              "
+              class="px-2 py-0.5 rounded text-[11px] transition-all"
+            >
               Solid
             </button>
           </div>
@@ -221,7 +388,8 @@ import {
           <button
             (click)="captureSnapshot()"
             title="Snapshot Viewport [Multimodal Vision]"
-            class="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 text-xs font-semibold flex items-center gap-1 transition-all">
+            class="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 text-xs font-semibold flex items-center gap-1 transition-all"
+          >
             <span>📸</span>
             <span class="hidden xl:inline">Snap</span>
           </button>
@@ -230,7 +398,8 @@ import {
           <button
             (click)="exportGlb()"
             title="Export 3D Scene to GLB"
-            class="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1">
+            class="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1"
+          >
             <span>💾</span>
             <span class="hidden md:inline">Export</span>
           </button>
@@ -239,7 +408,8 @@ import {
           <button
             (click)="toggleFullscreen()"
             [title]="isFullscreen() ? 'Exit Fullscreen' : 'Enter Fullscreen Mode'"
-            class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors">
+            class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors"
+          >
             @if (isFullscreen()) {
               <span class="font-bold text-xs">⤓ Exit</span>
             } @else {
@@ -253,19 +423,26 @@ import {
            MAIN VIEWPORT CONTAINER WITH FLOATING CAD OVERLAYS
            ===================================================================== -->
       <div class="relative flex-1 w-full min-h-0 overflow-hidden flex">
-
         <!-- ===================================================================
              LEFT FLOATING SKETCHUP TOOL PALETTE
              =================================================================== -->
-        <aside class="absolute left-3 top-3 bottom-3 z-20 flex flex-col justify-between pointer-events-none">
-          <div class="p-1.5 rounded-2xl bg-white/95 backdrop-blur-xl border border-slate-300 shadow-xl pointer-events-auto flex flex-col gap-1 w-11 sm:w-12 items-center">
-            
+        <aside
+          class="absolute left-3 top-3 bottom-3 z-20 flex flex-col justify-between pointer-events-none"
+        >
+          <div
+            class="p-1.5 rounded-2xl bg-white/95 backdrop-blur-xl border border-slate-300 shadow-xl pointer-events-auto flex flex-col gap-1 w-11 sm:w-12 items-center"
+          >
             <!-- Tool 1: Select (Space) -->
             <button
               (click)="setActiveCadTool('select')"
-              [class]="activeCadTool() === 'select' ? 'bg-cyan-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-100'"
+              [class]="
+                activeCadTool() === 'select'
+                  ? 'bg-cyan-600 text-white shadow-md'
+                  : 'text-slate-700 hover:bg-slate-100'
+              "
               title="Select (Space)"
-              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-bold transition-all group relative">
+              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-bold transition-all group relative"
+            >
               <span>↖</span>
               <span class="text-[8px] leading-none font-mono opacity-60">Sel</span>
             </button>
@@ -275,9 +452,14 @@ import {
             <!-- Tool 2: Line (L) -->
             <button
               (click)="setActiveCadTool('line')"
-              [class]="activeCadTool() === 'line' ? 'bg-rose-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-100'"
+              [class]="
+                activeCadTool() === 'line'
+                  ? 'bg-rose-600 text-white shadow-md'
+                  : 'text-slate-700 hover:bg-slate-100'
+              "
               title="Line Tool (L)"
-              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-bold transition-all group relative">
+              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-bold transition-all group relative"
+            >
               <span>✏️</span>
               <span class="text-[8px] leading-none font-mono opacity-60">Line</span>
             </button>
@@ -285,9 +467,14 @@ import {
             <!-- Tool 3: Rectangle (R) -->
             <button
               (click)="setActiveCadTool('rectangle')"
-              [class]="activeCadTool() === 'rectangle' ? 'bg-rose-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-100'"
+              [class]="
+                activeCadTool() === 'rectangle'
+                  ? 'bg-rose-600 text-white shadow-md'
+                  : 'text-slate-700 hover:bg-slate-100'
+              "
               title="Rectangle Tool (R)"
-              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-bold transition-all group relative">
+              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-bold transition-all group relative"
+            >
               <span>▭</span>
               <span class="text-[8px] leading-none font-mono opacity-60">Rect</span>
             </button>
@@ -295,9 +482,14 @@ import {
             <!-- Tool 4: Circle (C) -->
             <button
               (click)="setActiveCadTool('circle')"
-              [class]="activeCadTool() === 'circle' ? 'bg-rose-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-100'"
+              [class]="
+                activeCadTool() === 'circle'
+                  ? 'bg-rose-600 text-white shadow-md'
+                  : 'text-slate-700 hover:bg-slate-100'
+              "
               title="Circle Tool (C)"
-              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-bold transition-all group relative">
+              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-bold transition-all group relative"
+            >
               <span>◯</span>
               <span class="text-[8px] leading-none font-mono opacity-60">Circ</span>
             </button>
@@ -305,9 +497,14 @@ import {
             <!-- Tool 5: Push-Pull (P) -->
             <button
               (click)="setActiveCadTool('push_pull')"
-              [class]="activeCadTool() === 'push_pull' ? 'bg-amber-500 text-white shadow-md ring-2 ring-amber-300' : 'text-amber-700 hover:bg-amber-50'"
+              [class]="
+                activeCadTool() === 'push_pull'
+                  ? 'bg-amber-500 text-white shadow-md ring-2 ring-amber-300'
+                  : 'text-amber-700 hover:bg-amber-50'
+              "
               title="Push / Pull Extrude (P)"
-              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-black transition-all group relative">
+              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-black transition-all group relative"
+            >
               <span>⮉</span>
               <span class="text-[8px] leading-none font-mono opacity-80">Push</span>
             </button>
@@ -317,9 +514,14 @@ import {
             <!-- Tool 6: Move (M / W) -->
             <button
               (click)="setActiveCadTool('move')"
-              [class]="activeCadTool() === 'move' ? 'bg-cyan-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-100'"
+              [class]="
+                activeCadTool() === 'move'
+                  ? 'bg-cyan-600 text-white shadow-md'
+                  : 'text-slate-700 hover:bg-slate-100'
+              "
               title="Move (M / W)"
-              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-bold transition-all">
+              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-bold transition-all"
+            >
               <span>✥</span>
               <span class="text-[8px] leading-none font-mono opacity-60">Move</span>
             </button>
@@ -327,9 +529,14 @@ import {
             <!-- Tool 7: Rotate (Q / E) -->
             <button
               (click)="setActiveCadTool('rotate')"
-              [class]="activeCadTool() === 'rotate' ? 'bg-cyan-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-100'"
+              [class]="
+                activeCadTool() === 'rotate'
+                  ? 'bg-cyan-600 text-white shadow-md'
+                  : 'text-slate-700 hover:bg-slate-100'
+              "
               title="Rotate (Q / E)"
-              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-bold transition-all">
+              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-bold transition-all"
+            >
               <span>↻</span>
               <span class="text-[8px] leading-none font-mono opacity-60">Rot</span>
             </button>
@@ -337,9 +544,14 @@ import {
             <!-- Tool 8: Scale (S / R) -->
             <button
               (click)="setActiveCadTool('scale')"
-              [class]="activeCadTool() === 'scale' ? 'bg-cyan-600 text-white shadow-md' : 'text-slate-700 hover:bg-slate-100'"
+              [class]="
+                activeCadTool() === 'scale'
+                  ? 'bg-cyan-600 text-white shadow-md'
+                  : 'text-slate-700 hover:bg-slate-100'
+              "
               title="Scale (S)"
-              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-bold transition-all">
+              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-bold transition-all"
+            >
               <span>⤢</span>
               <span class="text-[8px] leading-none font-mono opacity-60">Scale</span>
             </button>
@@ -349,9 +561,14 @@ import {
             <!-- Tool 9: Tape Measure (T) -->
             <button
               (click)="setActiveCadTool('tape_measure')"
-              [class]="activeCadTool() === 'tape_measure' ? 'bg-emerald-600 text-white shadow-md' : 'text-emerald-700 hover:bg-emerald-50'"
+              [class]="
+                activeCadTool() === 'tape_measure'
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'text-emerald-700 hover:bg-emerald-50'
+              "
               title="Tape Measure & Area (T)"
-              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-bold transition-all">
+              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-bold transition-all"
+            >
               <span>📐</span>
               <span class="text-[8px] leading-none font-mono opacity-80">Tape</span>
             </button>
@@ -359,9 +576,14 @@ import {
             <!-- Tool 10: Paint Bucket (B) -->
             <button
               (click)="setActiveCadTool('paint_bucket')"
-              [class]="activeCadTool() === 'paint_bucket' ? 'bg-indigo-600 text-white shadow-md' : 'text-indigo-700 hover:bg-indigo-50'"
+              [class]="
+                activeCadTool() === 'paint_bucket'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-indigo-700 hover:bg-indigo-50'
+              "
               title="Paint Bucket Materials (B)"
-              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-bold transition-all">
+              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-bold transition-all"
+            >
               <span>🎨</span>
               <span class="text-[8px] leading-none font-mono opacity-80">Paint</span>
             </button>
@@ -369,9 +591,14 @@ import {
             <!-- Tool 11: Orbit (O) -->
             <button
               (click)="setActiveCadTool('orbit')"
-              [class]="activeCadTool() === 'orbit' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-700 hover:bg-slate-100'"
+              [class]="
+                activeCadTool() === 'orbit'
+                  ? 'bg-slate-800 text-white shadow-md'
+                  : 'text-slate-700 hover:bg-slate-100'
+              "
               title="Orbit Camera (O)"
-              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-bold transition-all">
+              class="w-8 sm:w-9 h-8 sm:h-9 rounded-xl flex flex-col items-center justify-center text-sm font-bold transition-all"
+            >
               <span>🌐</span>
               <span class="text-[8px] leading-none font-mono opacity-60">Orbit</span>
             </button>
@@ -388,46 +615,76 @@ import {
           (mouseup)="onCanvasMouseUp($event)"
           (mousemove)="onCanvasMouseMove($event)"
           (click)="onCanvasClick($event)"
-          class="w-full h-full flex-1 block cursor-crosshair outline-none"></canvas>
+          class="w-full h-full flex-1 block cursor-crosshair outline-none"
+        ></canvas>
 
         <!-- ===================================================================
              RIGHT FLOATING COLLAPSIBLE CAD TRAYS DOCK
              =================================================================== -->
-        <aside class="absolute right-3 top-3 bottom-3 z-20 flex flex-col pointer-events-none max-w-[340px] w-[calc(100vw-5rem)]">
+        <aside
+          class="absolute right-3 top-3 bottom-3 z-20 flex flex-col pointer-events-none max-w-[340px] w-[calc(100vw-5rem)]"
+        >
           <!-- Tray Tab Strip -->
-          <div class="flex items-center gap-1 p-1 rounded-2xl bg-white/95 backdrop-blur-xl border border-slate-300 shadow-xl pointer-events-auto self-end overflow-x-auto max-w-full">
+          <div
+            class="flex items-center gap-1 p-1 rounded-2xl bg-white/95 backdrop-blur-xl border border-slate-300 shadow-xl pointer-events-auto self-end overflow-x-auto max-w-full"
+          >
             <button
               (click)="toggleTrayTab('entity')"
-              [class]="activeTrayTab() === 'entity' ? 'bg-cyan-600 text-white font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-100'"
-              class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1 transition-all">
+              [class]="
+                activeTrayTab() === 'entity'
+                  ? 'bg-cyan-600 text-white font-bold shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-100'
+              "
+              class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1 transition-all"
+            >
               <span>ℹ️</span>
               <span class="hidden sm:inline">Entity</span>
             </button>
             <button
               (click)="toggleTrayTab('materials')"
-              [class]="activeTrayTab() === 'materials' ? 'bg-cyan-600 text-white font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-100'"
-              class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1 transition-all">
+              [class]="
+                activeTrayTab() === 'materials'
+                  ? 'bg-cyan-600 text-white font-bold shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-100'
+              "
+              class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1 transition-all"
+            >
               <span>🧱</span>
               <span class="hidden sm:inline">Materials</span>
             </button>
             <button
               (click)="toggleTrayTab('components')"
-              [class]="activeTrayTab() === 'components' ? 'bg-cyan-600 text-white font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-100'"
-              class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1 transition-all">
+              [class]="
+                activeTrayTab() === 'components'
+                  ? 'bg-cyan-600 text-white font-bold shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-100'
+              "
+              class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1 transition-all"
+            >
               <span>🏛️</span>
               <span class="hidden sm:inline">Components</span>
             </button>
             <button
               (click)="toggleTrayTab('outliner')"
-              [class]="activeTrayTab() === 'outliner' ? 'bg-cyan-600 text-white font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-100'"
-              class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1 transition-all">
+              [class]="
+                activeTrayTab() === 'outliner'
+                  ? 'bg-cyan-600 text-white font-bold shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-100'
+              "
+              class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1 transition-all"
+            >
               <span>🌲</span>
               <span class="hidden sm:inline">Outliner</span>
             </button>
             <button
               (click)="toggleTrayTab('styles')"
-              [class]="activeTrayTab() === 'styles' ? 'bg-cyan-600 text-white font-bold shadow-xs' : 'text-slate-600 hover:bg-slate-100'"
-              class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1 transition-all">
+              [class]="
+                activeTrayTab() === 'styles'
+                  ? 'bg-cyan-600 text-white font-bold shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-100'
+              "
+              class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1 transition-all"
+            >
               <span>⚙️</span>
               <span class="hidden sm:inline">Styles</span>
             </button>
@@ -435,14 +692,22 @@ import {
 
           <!-- Tray Content Panel (when expanded) -->
           @if (activeTrayTab(); as tab) {
-            <div class="mt-2 flex-1 rounded-2xl bg-white/95 backdrop-blur-2xl border border-slate-300 shadow-2xl p-3.5 pointer-events-auto overflow-y-auto max-h-[calc(100%-3.5rem)] flex flex-col text-xs text-slate-700">
-              
+            <div
+              class="mt-2 flex-1 rounded-2xl bg-white/95 backdrop-blur-2xl border border-slate-300 shadow-2xl p-3.5 pointer-events-auto overflow-y-auto max-h-[calc(100%-3.5rem)] flex flex-col text-xs text-slate-700"
+            >
               <!-- Header -->
               <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-200">
-                <span class="font-bold text-slate-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <span
+                  class="font-bold text-slate-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5"
+                >
                   <span>{{ getTrayTitle(tab) }}</span>
                 </span>
-                <button (click)="activeTrayTab.set(null)" class="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 text-xs">✕</button>
+                <button
+                  (click)="activeTrayTab.set(null)"
+                  class="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 text-xs"
+                >
+                  ✕
+                </button>
               </div>
 
               <!-- Tab 1: Entity Info -->
@@ -452,7 +717,10 @@ import {
                     <div class="p-2.5 rounded-xl bg-cyan-50/70 border border-cyan-200/80 space-y-1">
                       <div class="flex items-center justify-between">
                         <span class="font-bold text-cyan-900 text-sm truncate">{{ sel.name }}</span>
-                        <span class="px-2 py-0.5 rounded-full bg-cyan-200 text-cyan-900 text-[10px] font-mono uppercase">{{ sel.type }}</span>
+                        <span
+                          class="px-2 py-0.5 rounded-full bg-cyan-200 text-cyan-900 text-[10px] font-mono uppercase"
+                          >{{ sel.type }}</span
+                        >
                       </div>
                       <div class="text-[11px] text-cyan-800 font-mono">
                         Pos: ({{ sel.position.x }}m, {{ sel.position.y }}m, {{ sel.position.z }}m)
@@ -463,13 +731,15 @@ import {
                     <div class="grid grid-cols-2 gap-2">
                       <button
                         (click)="quickPushPullSelected(3.0)"
-                        class="px-2.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-semibold flex items-center justify-center gap-1.5 transition-all">
+                        class="px-2.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-semibold flex items-center justify-center gap-1.5 transition-all"
+                      >
                         <span>⮉</span>
                         <span>Push 3.0m</span>
                       </button>
                       <button
                         (click)="quickPushPullSelected(0.2)"
-                        class="px-2.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-semibold flex items-center justify-center gap-1.5 transition-all">
+                        class="px-2.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-semibold flex items-center justify-center gap-1.5 transition-all"
+                      >
                         <span>⮉</span>
                         <span>Slab 0.2m</span>
                       </button>
@@ -478,13 +748,15 @@ import {
                     <div class="grid grid-cols-2 gap-2">
                       <button
                         (click)="deleteSelected()"
-                        class="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-semibold flex items-center justify-center gap-1 transition-all">
+                        class="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-semibold flex items-center justify-center gap-1 transition-all"
+                      >
                         <span>🗑️</span>
                         <span>Delete</span>
                       </button>
                       <button
                         (click)="measureSelected()"
-                        class="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 font-semibold flex items-center justify-center gap-1 transition-all">
+                        class="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 font-semibold flex items-center justify-center gap-1 transition-all"
+                      >
                         <span>📐</span>
                         <span>Measure Area</span>
                       </button>
@@ -493,7 +765,9 @@ import {
                     <div class="py-8 text-center text-slate-400 space-y-1.5">
                       <div class="text-2xl">↖</div>
                       <p class="font-medium">No Entity Selected</p>
-                      <p class="text-[11px] text-slate-400">Click any mesh in the scene or pick from the Outliner tray.</p>
+                      <p class="text-[11px] text-slate-400">
+                        Click any mesh in the scene or pick from the Outliner tray.
+                      </p>
                     </div>
                   }
                 </div>
@@ -502,17 +776,31 @@ import {
               <!-- Tab 2: Materials Swatch Tray -->
               @if (tab === 'materials') {
                 <div class="space-y-3">
-                  <p class="text-[11px] text-slate-500">Pick a preset to apply to selection or click with Paint Bucket [B]:</p>
+                  <p class="text-[11px] text-slate-500">
+                    Pick a preset to apply to selection or click with Paint Bucket [B]:
+                  </p>
                   <div class="grid grid-cols-2 gap-2">
                     @for (mat of materialPresets; track mat.id) {
                       <button
                         (click)="applyPresetMaterial(mat.id)"
-                        [class]="selectedMaterialPreset() === mat.id ? 'ring-2 ring-cyan-500 bg-cyan-50/50' : 'bg-slate-50 hover:bg-slate-100'"
-                        class="p-2 rounded-xl border border-slate-200 text-left flex items-center gap-2 transition-all">
-                        <span class="w-5 h-5 rounded-lg flex-shrink-0 shadow-xs border border-slate-300" [style.background-color]="mat.color"></span>
+                        [class]="
+                          selectedMaterialPreset() === mat.id
+                            ? 'ring-2 ring-cyan-500 bg-cyan-50/50'
+                            : 'bg-slate-50 hover:bg-slate-100'
+                        "
+                        class="p-2 rounded-xl border border-slate-200 text-left flex items-center gap-2 transition-all"
+                      >
+                        <span
+                          class="w-5 h-5 rounded-lg flex-shrink-0 shadow-xs border border-slate-300"
+                          [style.background-color]="mat.color"
+                        ></span>
                         <div class="min-w-0">
-                          <div class="font-semibold text-slate-800 text-[11px] truncate">{{ mat.name }}</div>
-                          <div class="text-[9px] text-slate-400 font-mono capitalize">{{ mat.type }}</div>
+                          <div class="font-semibold text-slate-800 text-[11px] truncate">
+                            {{ mat.name }}
+                          </div>
+                          <div class="text-[9px] text-slate-400 font-mono capitalize">
+                            {{ mat.type }}
+                          </div>
                         </div>
                       </button>
                     }
@@ -523,15 +811,22 @@ import {
               <!-- Tab 3: Components Asset Library -->
               @if (tab === 'components') {
                 <div class="space-y-3">
-                  <p class="text-[11px] text-slate-500">Click to place architectural assets at the cursor / origin:</p>
+                  <p class="text-[11px] text-slate-500">
+                    Click to place architectural assets at the cursor / origin:
+                  </p>
                   <div class="grid grid-cols-2 gap-2">
                     @for (comp of componentLibrary; track comp.type) {
                       <button
                         (click)="placePresetComponent(comp.type)"
-                        class="p-2.5 rounded-xl bg-slate-50 hover:bg-cyan-50 hover:border-cyan-300 border border-slate-200 text-left flex items-center gap-2 transition-all group">
+                        class="p-2.5 rounded-xl bg-slate-50 hover:bg-cyan-50 hover:border-cyan-300 border border-slate-200 text-left flex items-center gap-2 transition-all group"
+                      >
                         <span class="text-lg">{{ comp.icon }}</span>
                         <div class="min-w-0">
-                          <div class="font-bold text-slate-800 group-hover:text-cyan-800 text-[11px] truncate">{{ comp.name }}</div>
+                          <div
+                            class="font-bold text-slate-800 group-hover:text-cyan-800 text-[11px] truncate"
+                          >
+                            {{ comp.name }}
+                          </div>
                           <div class="text-[9px] text-slate-400 font-mono">{{ comp.category }}</div>
                         </div>
                       </button>
@@ -546,13 +841,21 @@ import {
                   @for (node of bridge.sceneNodes(); track node.id) {
                     <div
                       (click)="bridge.selectObject(node.name)"
-                      [class]="bridge.selectedNode()?.name === node.name ? 'bg-cyan-50 border-cyan-300 text-cyan-900 font-bold' : 'hover:bg-slate-50 border-transparent text-slate-700'"
-                      class="p-1.5 px-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition-colors text-[11px]">
+                      [class]="
+                        bridge.selectedNode()?.name === node.name
+                          ? 'bg-cyan-50 border-cyan-300 text-cyan-900 font-bold'
+                          : 'hover:bg-slate-50 border-transparent text-slate-700'
+                      "
+                      class="p-1.5 px-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition-colors text-[11px]"
+                    >
                       <div class="flex items-center gap-2 truncate">
                         <span>{{ getNodeIcon(node.type) }}</span>
                         <span class="truncate">{{ node.name }}</span>
                       </div>
-                      <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">{{ node.type }}</span>
+                      <span
+                        class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-500"
+                        >{{ node.type }}</span
+                      >
                     </div>
                   }
                 </div>
@@ -564,10 +867,26 @@ import {
                   <div class="space-y-1">
                     <label class="font-bold text-slate-700 text-[11px]">Coordinate Guides</label>
                     <div class="grid grid-cols-2 gap-1.5">
-                      <button (click)="toggleAxes()" class="px-2 py-1.5 rounded-lg border text-left text-xs" [class]="showAxes() ? 'bg-cyan-50 border-cyan-300 text-cyan-800 font-semibold' : 'bg-slate-50 text-slate-500'">
+                      <button
+                        (click)="toggleAxes()"
+                        class="px-2 py-1.5 rounded-lg border text-left text-xs"
+                        [class]="
+                          showAxes()
+                            ? 'bg-cyan-50 border-cyan-300 text-cyan-800 font-semibold'
+                            : 'bg-slate-50 text-slate-500'
+                        "
+                      >
                         {{ showAxes() ? '✓ Axes Active' : '✕ Axes Hidden' }}
                       </button>
-                      <button (click)="toggleGrid()" class="px-2 py-1.5 rounded-lg border text-left text-xs" [class]="showGrid() ? 'bg-cyan-50 border-cyan-300 text-cyan-800 font-semibold' : 'bg-slate-50 text-slate-500'">
+                      <button
+                        (click)="toggleGrid()"
+                        class="px-2 py-1.5 rounded-lg border text-left text-xs"
+                        [class]="
+                          showGrid()
+                            ? 'bg-cyan-50 border-cyan-300 text-cyan-800 font-semibold'
+                            : 'bg-slate-50 text-slate-500'
+                        "
+                      >
                         {{ showGrid() ? '✓ Ground Grid' : '✕ Grid Hidden' }}
                       </button>
                     </div>
@@ -575,61 +894,79 @@ import {
 
                   <div class="space-y-1">
                     <label class="font-bold text-slate-700 text-[11px]">Shadows & Sun Light</label>
-                    <button (click)="toggleShadows()" class="w-full px-2 py-1.5 rounded-lg border text-left text-xs" [class]="showShadows() ? 'bg-amber-50 border-amber-300 text-amber-800 font-semibold' : 'bg-slate-50 text-slate-500'">
+                    <button
+                      (click)="toggleShadows()"
+                      class="w-full px-2 py-1.5 rounded-lg border text-left text-xs"
+                      [class]="
+                        showShadows()
+                          ? 'bg-amber-50 border-amber-300 text-amber-800 font-semibold'
+                          : 'bg-slate-50 text-slate-500'
+                      "
+                    >
                       {{ showShadows() ? '✓ Sun Soft Shadows Enabled' : '✕ Shadows Disabled' }}
                     </button>
                   </div>
                 </div>
               }
-
             </div>
           }
         </aside>
-
       </div>
 
       <!-- =====================================================================
            BOTTOM SKETCHUP MEASUREMENTS & STATUS HUD
            ===================================================================== -->
-      <footer class="h-10 bg-white/95 border-t border-slate-200/90 backdrop-blur-md px-3 sm:px-4 flex items-center justify-between gap-2 text-[11px] font-mono text-slate-600 select-none z-30 flex-shrink-0 shadow-xs">
-        
+      <footer
+        class="h-10 bg-white/95 border-t border-slate-200/90 backdrop-blur-md px-3 sm:px-4 flex items-center justify-between gap-2 text-[11px] font-mono text-slate-600 select-none z-30 flex-shrink-0 shadow-xs"
+      >
         <!-- Left: Tool Guidance Tip -->
         <div class="flex items-center gap-2 min-w-0 flex-1 truncate">
-          <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-rose-50 border border-rose-200 text-rose-800 font-bold flex-shrink-0">
+          <span
+            class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-rose-50 border border-rose-200 text-rose-800 font-bold flex-shrink-0"
+          >
             <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
             <span class="uppercase tracking-wider text-[10px]">{{ activeCadTool() }}</span>
           </span>
-          <span class="text-slate-600 truncate hidden md:inline font-sans text-xs">{{ activeToolHint() }}</span>
+          <span class="text-slate-600 truncate hidden md:inline font-sans text-xs">{{
+            activeToolHint()
+          }}</span>
         </div>
 
         <!-- Center: Snapping Pill & Coordinates -->
         <div class="hidden lg:flex items-center gap-3 text-slate-500">
-          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-slate-700">
+          <span
+            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-slate-700"
+          >
             <span class="text-cyan-600">●</span>
             <span>{{ snapTarget() }}</span>
           </span>
           <span class="font-mono text-[11px] text-slate-700">
-            X: <strong class="text-slate-900">{{ cursorCoords().x.toFixed(2) }}m</strong>
-            Y: <strong class="text-slate-900">{{ cursorCoords().y.toFixed(2) }}m</strong>
-            Z: <strong class="text-slate-900">{{ cursorCoords().z.toFixed(2) }}m</strong>
+            X: <strong class="text-slate-900">{{ cursorCoords().x.toFixed(2) }}m</strong> Y:
+            <strong class="text-slate-900">{{ cursorCoords().y.toFixed(2) }}m</strong> Z:
+            <strong class="text-slate-900">{{ cursorCoords().z.toFixed(2) }}m</strong>
           </span>
         </div>
 
         <!-- Right: Measurements VCB Input Box & Telemetry -->
         <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-          
           <!-- Measurements VCB Box -->
-          <div class="flex items-center gap-1.5 bg-slate-100 border border-slate-300 rounded-lg px-2 py-0.5 focus-within:border-cyan-500 focus-within:bg-white shadow-xs">
-            <label class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Measurements:</label>
+          <div
+            class="flex items-center gap-1.5 bg-slate-100 border border-slate-300 rounded-lg px-2 py-0.5 focus-within:border-cyan-500 focus-within:bg-white shadow-xs"
+          >
+            <label class="text-[10px] uppercase font-bold text-slate-500 tracking-wider"
+              >Measurements:</label
+            >
             <input
               type="text"
               [(ngModel)]="vcbInputText"
               (keydown.enter)="commitVcbInput()"
               placeholder="e.g. 6.0, 4.0"
-              class="w-24 sm:w-28 bg-transparent text-slate-900 font-mono text-xs focus:outline-none placeholder:text-slate-400 font-bold" />
+              class="w-24 sm:w-28 bg-transparent text-slate-900 font-mono text-xs focus:outline-none placeholder:text-slate-400 font-bold"
+            />
             <button
               (click)="commitVcbInput()"
-              class="px-1.5 py-0.2 text-[9px] rounded bg-slate-200 hover:bg-cyan-600 hover:text-white font-bold transition-colors">
+              class="px-1.5 py-0.2 text-[9px] rounded bg-slate-200 hover:bg-cyan-600 hover:text-white font-bold transition-colors"
+            >
               ⏎
             </button>
           </div>
@@ -640,11 +977,8 @@ import {
             <span>•</span>
             <span class="font-bold text-emerald-600">{{ fps() }} FPS</span>
           </div>
-
         </div>
-
       </footer>
-
     </div>
   `,
 })
@@ -668,7 +1002,9 @@ export class Visualizer3dComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // CAD Tool & UI State
   readonly activeCadTool = signal<CadActiveTool>('select');
-  readonly activeTrayTab = signal<'entity' | 'materials' | 'components' | 'outliner' | 'styles' | null>('entity');
+  readonly activeTrayTab = signal<
+    'entity' | 'materials' | 'components' | 'outliner' | 'styles' | null
+  >('entity');
   readonly selectedMaterialPreset = signal<CadMaterialPreset>('wood_oak');
   readonly cursorCoords = signal<{ x: number; y: number; z: number }>({ x: 0, y: 0, z: 0 });
   readonly snapTarget = signal<string>('Ground Plane [XZ]');
@@ -705,22 +1041,28 @@ export class Visualizer3dComponent implements OnInit, AfterViewInit, OnDestroy {
   });
 
   // Architectural Material Presets for Tray
-  readonly materialPresets: { id: CadMaterialPreset; name: string; type: string; color: string }[] = [
-    { id: 'concrete', name: 'Polished Concrete', type: 'Stone', color: '#94a3b8' },
-    { id: 'wood_oak', name: 'Natural Oak Wood', type: 'Timber', color: '#a2703f' },
-    { id: 'brick_red', name: 'Terracotta Brick', type: 'Masonry', color: '#b91c1c' },
-    { id: 'glass_frosted', name: 'Architectural Glass', type: 'Glass', color: '#e0f2fe' },
-    { id: 'marble_carrara', name: 'Carrara Marble', type: 'Stone', color: '#f8fafc' },
-    { id: 'steel_brushed', name: 'Brushed Steel', type: 'Metal', color: '#64748b' },
-    { id: 'tile_subway', name: 'White Ceramic Tile', type: 'Ceramic', color: '#ffffff' },
-    { id: 'gold', name: 'Polished Brass / Gold', type: 'Metal', color: '#ffd700' },
-    { id: 'neon_cyan', name: 'Cyber Neon Emissive', type: 'Light', color: '#00f0ff' },
-    { id: 'matte_dark', name: 'Matte Charcoal Slate', type: 'Composite', color: '#1e293b' },
-    { id: 'plaster_white', name: 'Smooth White Plaster', type: 'Finish', color: '#f1f5f9' },
-  ];
+  readonly materialPresets: { id: CadMaterialPreset; name: string; type: string; color: string }[] =
+    [
+      { id: 'concrete', name: 'Polished Concrete', type: 'Stone', color: '#94a3b8' },
+      { id: 'wood_oak', name: 'Natural Oak Wood', type: 'Timber', color: '#a2703f' },
+      { id: 'brick_red', name: 'Terracotta Brick', type: 'Masonry', color: '#b91c1c' },
+      { id: 'glass_frosted', name: 'Architectural Glass', type: 'Glass', color: '#e0f2fe' },
+      { id: 'marble_carrara', name: 'Carrara Marble', type: 'Stone', color: '#f8fafc' },
+      { id: 'steel_brushed', name: 'Brushed Steel', type: 'Metal', color: '#64748b' },
+      { id: 'tile_subway', name: 'White Ceramic Tile', type: 'Ceramic', color: '#ffffff' },
+      { id: 'gold', name: 'Polished Brass / Gold', type: 'Metal', color: '#ffd700' },
+      { id: 'neon_cyan', name: 'Cyber Neon Emissive', type: 'Light', color: '#00f0ff' },
+      { id: 'matte_dark', name: 'Matte Charcoal Slate', type: 'Composite', color: '#1e293b' },
+      { id: 'plaster_white', name: 'Smooth White Plaster', type: 'Finish', color: '#f1f5f9' },
+    ];
 
   // Architectural Component Library for Tray
-  readonly componentLibrary: { type: CadComponentType; name: string; category: string; icon: string }[] = [
+  readonly componentLibrary: {
+    type: CadComponentType;
+    name: string;
+    category: string;
+    icon: string;
+  }[] = [
     { type: 'desk', name: 'Executive Desk', category: 'Furniture', icon: '🪵' },
     { type: 'chair', name: 'Ergonomic Chair', category: 'Furniture', icon: '🪑' },
     { type: 'sofa', name: 'Modern Sofa', category: 'Living', icon: '🛋️' },
@@ -768,13 +1110,14 @@ export class Visualizer3dComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor(
     @Optional() bridge?: WebmcpThreeSceneBridge,
     @Optional() @Inject(PLATFORM_ID) platformId?: Object,
-    @Optional() captureService?: WebMcpViewportCaptureService
+    @Optional() captureService?: WebMcpViewportCaptureService,
   ) {
     if (bridge) {
       this.bridge = bridge;
     } else {
       try {
-        this.bridge = inject(WebmcpThreeSceneBridge, { optional: true }) || new WebmcpThreeSceneBridge();
+        this.bridge =
+          inject(WebmcpThreeSceneBridge, { optional: true }) || new WebmcpThreeSceneBridge();
       } catch {
         this.bridge = new WebmcpThreeSceneBridge();
       }
@@ -869,7 +1212,7 @@ export class Visualizer3dComponent implements OnInit, AfterViewInit, OnDestroy {
       preserveDrawingBuffer: true,
       alpha: true,
     });
-    this.renderer.setSize(width, height);
+    this.renderer.setSize(width, height, false);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -915,19 +1258,28 @@ export class Visualizer3dComponent implements OnInit, AfterViewInit, OnDestroy {
     // Red Line: X axis (-50m to +50m)
     const xPoints = [new THREE.Vector3(-50, 0.005, 0), new THREE.Vector3(50, 0.005, 0)];
     const xGeo = new THREE.BufferGeometry().setFromPoints(xPoints);
-    const xLine = new THREE.Line(xGeo, new THREE.LineBasicMaterial({ color: 0xef4444, linewidth: 2 }));
+    const xLine = new THREE.Line(
+      xGeo,
+      new THREE.LineBasicMaterial({ color: 0xef4444, linewidth: 2 }),
+    );
     this.axesGroup.add(xLine);
 
     // Green Line: Z axis (-50m to +50m, ground depth in Three.js)
     const zPoints = [new THREE.Vector3(0, 0.005, -50), new THREE.Vector3(0, 0.005, 50)];
     const zGeo = new THREE.BufferGeometry().setFromPoints(zPoints);
-    const zLine = new THREE.Line(zGeo, new THREE.LineBasicMaterial({ color: 0x22c55e, linewidth: 2 }));
+    const zLine = new THREE.Line(
+      zGeo,
+      new THREE.LineBasicMaterial({ color: 0x22c55e, linewidth: 2 }),
+    );
     this.axesGroup.add(zLine);
 
     // Blue Line: Y axis (0 to 30m, vertical height)
     const yPoints = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 30, 0)];
     const yGeo = new THREE.BufferGeometry().setFromPoints(yPoints);
-    const yLine = new THREE.Line(yGeo, new THREE.LineBasicMaterial({ color: 0x3b82f6, linewidth: 2 }));
+    const yLine = new THREE.Line(
+      yGeo,
+      new THREE.LineBasicMaterial({ color: 0x3b82f6, linewidth: 2 }),
+    );
     this.axesGroup.add(yLine);
 
     this.scene.add(this.axesGroup);
@@ -966,7 +1318,7 @@ export class Visualizer3dComponent implements OnInit, AfterViewInit, OnDestroy {
     this.scene.add(
       this.transformControls.getHelper
         ? this.transformControls.getHelper()
-        : (this.transformControls as any)
+        : (this.transformControls as any),
     );
   }
 
@@ -1047,17 +1399,28 @@ export class Visualizer3dComponent implements OnInit, AfterViewInit, OnDestroy {
       if (width === 0 || height === 0) return;
       this.camera.aspect = width / height;
       this.camera.updateProjectionMatrix();
-      this.renderer.setSize(width, height);
+      this.renderer.setSize(width, height, false);
     };
     window.addEventListener('resize', this.resizeHandler);
 
     if (typeof ResizeObserver !== 'undefined') {
+      let resizeRaf: number | null = null;
       this.resizeObserver = new ResizeObserver(() => {
-        this.resizeHandler?.();
+        if (resizeRaf !== null) {
+          cancelAnimationFrame(resizeRaf);
+        }
+        resizeRaf = requestAnimationFrame(() => {
+          this.resizeHandler?.();
+        });
       });
       const container = canvas.parentElement || canvas;
       this.resizeObserver.observe(container);
     }
+
+    // Immediate post-layout sync to ensure correct aspect ratio upon initial view transition
+    requestAnimationFrame(() => {
+      this.resizeHandler?.();
+    });
   }
 
   // =========================================================================
@@ -1069,7 +1432,12 @@ export class Visualizer3dComponent implements OnInit, AfterViewInit, OnDestroy {
     const intersects = this.raycaster.intersectObjects(Array.from(this.meshes.values()), true);
     if (intersects.length > 0) {
       let hitObj: THREE.Object3D | null = intersects[0].object;
-      while (hitObj && !this.meshes.has(hitObj.name) && hitObj.parent && hitObj.parent !== this.scene) {
+      while (
+        hitObj &&
+        !this.meshes.has(hitObj.name) &&
+        hitObj.parent &&
+        hitObj.parent !== this.scene
+      ) {
         hitObj = hitObj.parent;
       }
       if (hitObj && this.meshes.has(hitObj.name)) {
@@ -1104,7 +1472,12 @@ export class Visualizer3dComponent implements OnInit, AfterViewInit, OnDestroy {
     if (meshHits.length > 0) {
       const hit = meshHits[0];
       let hitObj: THREE.Object3D | null = hit.object;
-      while (hitObj && !this.meshes.has(hitObj.name) && hitObj.parent && hitObj.parent !== this.scene) {
+      while (
+        hitObj &&
+        !this.meshes.has(hitObj.name) &&
+        hitObj.parent &&
+        hitObj.parent !== this.scene
+      ) {
         hitObj = hitObj.parent;
       }
       const selected = this.bridge.getSelectedObject();
@@ -1148,7 +1521,9 @@ export class Visualizer3dComponent implements OnInit, AfterViewInit, OnDestroy {
 
     if (this.canvasRef?.nativeElement) {
       const canvas = this.canvasRef.nativeElement;
-      const rect = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { left: 0, top: 0, width: 800, height: 600 };
+      const rect = canvas.getBoundingClientRect
+        ? canvas.getBoundingClientRect()
+        : { left: 0, top: 0, width: 800, height: 600 };
       if (rect.width > 0 && rect.height > 0) {
         this.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
         this.pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -1231,13 +1606,7 @@ export class Visualizer3dComponent implements OnInit, AfterViewInit, OnDestroy {
     // 6. Interactive 2D Drawing (Rectangle, Circle, Line)
     const intersectPoint = new THREE.Vector3();
     if (this.raycaster.ray.intersectPlane(this.groundPlane, intersectPoint)) {
-      if (!this.drawingStartPoint) {
-        // First click: record start point and isolate OrbitControls
-        this.drawingStartPoint = intersectPoint.clone();
-        if (this.orbitControls) {
-          this.orbitControls.enabled = false;
-        }
-      } else {
+      if (this.drawingStartPoint) {
         // Second click: finish drawing shape and restore OrbitControls
         const start = this.drawingStartPoint;
         const end = intersectPoint;
@@ -1282,6 +1651,12 @@ export class Visualizer3dComponent implements OnInit, AfterViewInit, OnDestroy {
         if (this.orbitControls) {
           this.orbitControls.enabled = true;
         }
+      } else {
+        // First click: record start point and isolate OrbitControls
+        this.drawingStartPoint = intersectPoint.clone();
+        if (this.orbitControls) {
+          this.orbitControls.enabled = false;
+        }
       }
     }
   }
@@ -1322,7 +1697,7 @@ export class Visualizer3dComponent implements OnInit, AfterViewInit, OnDestroy {
 
       const edges = new THREE.LineSegments(
         new THREE.EdgesGeometry(geo),
-        new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 2 })
+        new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 2 }),
       );
       mesh.add(edges);
 
@@ -1344,7 +1719,7 @@ export class Visualizer3dComponent implements OnInit, AfterViewInit, OnDestroy {
 
       const edges = new THREE.LineSegments(
         new THREE.EdgesGeometry(geo),
-        new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 2 })
+        new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 2 }),
       );
       mesh.add(edges);
 
@@ -1639,7 +2014,10 @@ export class Visualizer3dComponent implements OnInit, AfterViewInit, OnDestroy {
     const nodes = this.bridge.sceneNodes();
     const custom = nodes.filter((n) => n.isCustom);
     if (custom.length > 0) {
-      await this.bridge.manageHierarchy({ action: 'delete', target: custom[custom.length - 1].name });
+      await this.bridge.manageHierarchy({
+        action: 'delete',
+        target: custom[custom.length - 1].name,
+      });
     }
   }
 
@@ -1670,7 +2048,7 @@ export class Visualizer3dComponent implements OnInit, AfterViewInit, OnDestroy {
 
   @HostListener('window:keydown', ['$event'])
   handleKeyDown(event: KeyboardEvent): void {
-    const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
+    const activeEl = typeof document === 'undefined' ? null : document.activeElement;
     if (
       activeEl &&
       (activeEl.tagName === 'INPUT' ||
@@ -1708,8 +2086,12 @@ export class Visualizer3dComponent implements OnInit, AfterViewInit, OnDestroy {
         break;
       case ' ': {
         // Guard space key to only act when viewport or canvas is focused/active (prevent interfering with buttons/links)
-        const docBody = typeof document !== 'undefined' ? document.body : null;
-        if (activeEl && activeEl !== docBody && (activeEl.tagName === 'BUTTON' || activeEl.tagName === 'A')) {
+        const docBody = typeof document === 'undefined' ? null : document.body;
+        if (
+          activeEl &&
+          activeEl !== docBody &&
+          (activeEl.tagName === 'BUTTON' || activeEl.tagName === 'A')
+        ) {
           return;
         }
         event.preventDefault?.();
@@ -1759,7 +2141,7 @@ export class Visualizer3dComponent implements OnInit, AfterViewInit, OnDestroy {
         // Guard Delete/Backspace to only act when viewport or canvas is focused/active
         const canvas = this.canvasRef?.nativeElement;
         const container = canvas?.parentElement;
-        const docBody = typeof document !== 'undefined' ? document.body : null;
+        const docBody = typeof document === 'undefined' ? null : document.body;
         const isViewportActive =
           !activeEl ||
           activeEl === docBody ||

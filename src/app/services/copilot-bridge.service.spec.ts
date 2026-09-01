@@ -607,4 +607,196 @@ describe('CopilotBridgeService & Autonomous Agent Loop', () => {
       expect(assistantMsg?.thinking).toBe('Considering vehicle transformation');
     });
   });
+
+  describe('Hierarchical Subagent Delegation (Noise-Free Main Context)', () => {
+    it('should delegate domain tasks to SubAgentRunnerService and return clean receipt to orchestrator', async () => {
+      const mockRunner: any = {
+        executeTask: async (req: any) => ({
+          agentType: req.agentType,
+          objective: req.objective,
+          status: 'success',
+          summary: 'Specialist optimized 3D scene: Adjusted 3 meshes and framed camera.',
+          toolsUsed: ['cad_draw_shape', 'scene_3d_action'],
+          totalTurns: 2,
+          durationMs: 120,
+          tokenUsageEstimate: { promptTokens: 400, completionTokens: 50, totalTokens: 450 },
+        }),
+      };
+
+      const orchestratorService = new CopilotBridgeService(
+        mockHttp as any,
+        webmcpService,
+        registry,
+        mockRunner
+      );
+
+      // Verify that delegate_to_specialist tool is available in orchestrator tools
+      const tools = orchestratorService.getOpenAiTools();
+      const delegatorTool = tools.find((t) => t.function.name === 'delegate_to_specialist');
+      expect(delegatorTool).toBeDefined();
+
+      let turn = 0;
+      mockHttp.post = (_url: string, body: any) => {
+        turn++;
+        if (turn === 1) {
+          // Orchestrator decides to delegate to 3d-specialist
+          return of({
+            choices: [
+              {
+                index: 0,
+                message: {
+                  role: 'assistant',
+                  content: 'Delegating to 3D specialist...',
+                  tool_calls: [
+                    {
+                      id: 'call-deleg-1',
+                      type: 'function',
+                      function: {
+                        name: 'delegate_to_specialist',
+                        arguments: JSON.stringify({
+                          specialist: '3d-specialist',
+                          taskObjective: 'Frame camera and highlight components',
+                        }),
+                      },
+                    },
+                  ],
+                },
+                finish_reason: 'tool_calls',
+              },
+            ],
+          });
+        } else {
+          // Orchestrator gets receipt and responds to user
+          return of({
+            choices: [
+              {
+                index: 0,
+                message: {
+                  role: 'assistant',
+                  content: 'All done! The 3D scene was framed and highlighted.',
+                },
+                finish_reason: 'stop',
+              },
+            ],
+          });
+        }
+      };
+
+      await orchestratorService.sendMessage('Prepare the 3D showcase presentation');
+
+      const messages = orchestratorService.messages();
+      const toolMsg = messages.find((m) => m.role === 'tool' && m.name === 'delegate_to_specialist');
+
+      expect(toolMsg).toBeDefined();
+      expect(toolMsg?.toolExecution?.subagentReceipt).toBeDefined();
+      expect(toolMsg?.toolExecution?.subagentReceipt?.summary).toContain('Specialist optimized 3D scene');
+      expect(toolMsg?.toolExecution?.status).toBe('success');
+
+      // The final assistant message synthesized the receipt
+      const finalMsg = messages[messages.length - 1];
+      expect(finalMsg.role).toBe('assistant');
+      expect(finalMsg.content).toBe('All done! The 3D scene was framed and highlighted.');
+    });
+
+    it('should dynamically synthesize delegate_to_subagent tool when subagents are registered in SubAgentRegistryService', async () => {
+      const { SubAgentRegistryService } = await import('@cobies/webmcp-angular');
+      const { SubAgentRunnerService } = await import('./subagent-runner.service');
+
+      const subagentRegistry = new SubAgentRegistryService();
+      const runner = new SubAgentRunnerService(mockHttp as any, webmcpService, subagentRegistry);
+
+      const orchestratorService = new CopilotBridgeService(
+        mockHttp as any,
+        webmcpService,
+        registry,
+        runner,
+        subagentRegistry
+      );
+
+      const openAiTools = orchestratorService.getOpenAiTools();
+      const dynamicTool = openAiTools.find((t) => t.function.name === 'delegate_to_subagent');
+
+      expect(dynamicTool).toBeDefined();
+      expect(dynamicTool?.function.parameters.properties['target_subagent']).toBeDefined();
+      const subagentEnum = dynamicTool?.function.parameters.properties['target_subagent'].enum;
+      expect(subagentEnum).toContain('3d-specialist');
+      expect(subagentEnum).toContain('analytics-specialist');
+      expect(subagentEnum).toContain('audit-specialist');
+
+      // Test execution via delegate_to_subagent
+      let turn = 0;
+      mockHttp.post = (_url: string, body: any) => {
+        turn++;
+        if (turn === 1) {
+          // Parent LLM triggers delegate_to_subagent
+          return of({
+            choices: [
+              {
+                index: 0,
+                message: {
+                  role: 'assistant',
+                  content: null,
+                  tool_calls: [
+                    {
+                      id: 'call-dyn-sub-1',
+                      type: 'function',
+                      function: {
+                        name: 'delegate_to_subagent',
+                        arguments: JSON.stringify({
+                          target_subagent: 'analytics-specialist',
+                          objective: 'Compute Q3 ARR growth and risk profile',
+                        }),
+                      },
+                    },
+                  ],
+                },
+                finish_reason: 'tool_calls',
+              },
+            ],
+          });
+        } else if (turn === 2) {
+          // Specialist subagent internal turn: returns completion summary
+          return of({
+            choices: [
+              {
+                index: 0,
+                message: {
+                  role: 'assistant',
+                  content: 'Analytics complete: ARR growth is 24%, low risk detected.',
+                },
+                finish_reason: 'stop',
+              },
+            ],
+            usage: { prompt_tokens: 200, completion_tokens: 50, total_tokens: 250 },
+          });
+        } else {
+          // Parent LLM receives receipt and gives final answer
+          return of({
+            choices: [
+              {
+                index: 0,
+                message: {
+                  role: 'assistant',
+                  content: 'Here is the summary: ARR growth is 24% with low risk profile.',
+                },
+                finish_reason: 'stop',
+              },
+            ],
+          });
+        }
+      };
+
+      await orchestratorService.sendMessage('Analyze Q3 business metrics');
+
+      const messages = orchestratorService.messages();
+      const toolMsg = messages.find((m) => m.role === 'tool' && m.name === 'delegate_to_subagent');
+
+      expect(toolMsg).toBeDefined();
+      expect(toolMsg?.toolExecution?.subagentReceipt).toBeDefined();
+      expect(toolMsg?.toolExecution?.subagentReceipt?.agentType).toBe('analytics-specialist');
+      expect(toolMsg?.toolExecution?.subagentReceipt?.summary).toContain('ARR growth is 24%');
+      expect(toolMsg?.toolExecution?.status).toBe('success');
+    });
+  });
 });
+

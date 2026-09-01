@@ -21,11 +21,11 @@ describe('EnterpriseBiComponent (WebMCP Tools & Reactive Dashboard)', () => {
   });
 
   describe('WebMCP Tool Lifecycle Registration (ngOnInit & ngOnDestroy)', () => {
-    it('should register all 9 enterprise and inventory tools on ngOnInit', () => {
+    it('should register all 13 enterprise, inventory and procurement tools on ngOnInit', () => {
       const tools = webmcp.getTools();
       const toolNames = tools.map((t) => t.name);
 
-      expect(toolNames.length).toBe(9);
+      expect(toolNames.length).toBe(13);
       expect(toolNames).toContain('query_enterprise_metrics');
       expect(toolNames).toContain('filter_business_data');
       expect(toolNames).toContain('calculate_kpi_summary');
@@ -35,6 +35,10 @@ describe('EnterpriseBiComponent (WebMCP Tools & Reactive Dashboard)', () => {
       expect(toolNames).toContain('reorder_inventory_item');
       expect(toolNames).toContain('filter_inventory_by_domain');
       expect(toolNames).toContain('get_business_domain_summary');
+      expect(toolNames).toContain('open_purchase_order_modal');
+      expect(toolNames).toContain('fill_purchase_order_form');
+      expect(toolNames).toContain('submit_purchase_order');
+      expect(toolNames).toContain('close_purchase_order_modal');
     });
 
     it('should provide complete JSON Schema definitions for enterprise & inventory tools', () => {
@@ -67,9 +71,23 @@ describe('EnterpriseBiComponent (WebMCP Tools & Reactive Dashboard)', () => {
 
       const domainSummaryTool = webmcp.getTools().find((t) => t.name === 'get_business_domain_summary');
       expect(domainSummaryTool).toBeDefined();
+
+      const openModalTool = webmcp.getTools().find((t) => t.name === 'open_purchase_order_modal');
+      expect(openModalTool).toBeDefined();
+      expect(openModalTool?.parameters.properties?.['sku']).toBeDefined();
+
+      const fillFormTool = webmcp.getTools().find((t) => t.name === 'fill_purchase_order_form');
+      expect(fillFormTool).toBeDefined();
+      expect(fillFormTool?.parameters.properties?.['quantity']).toBeDefined();
+
+      const submitOrderTool = webmcp.getTools().find((t) => t.name === 'submit_purchase_order');
+      expect(submitOrderTool).toBeDefined();
+
+      const closeModalTool = webmcp.getTools().find((t) => t.name === 'close_purchase_order_modal');
+      expect(closeModalTool).toBeDefined();
     });
 
-    it('should cleanly unregister all 9 tools on ngOnDestroy', () => {
+    it('should cleanly unregister all 13 tools on ngOnDestroy', () => {
       component.ngOnDestroy();
       const tools = webmcp.getTools();
       const toolNames = tools.map((t) => t.name);
@@ -83,13 +101,17 @@ describe('EnterpriseBiComponent (WebMCP Tools & Reactive Dashboard)', () => {
       expect(toolNames).not.toContain('reorder_inventory_item');
       expect(toolNames).not.toContain('filter_inventory_by_domain');
       expect(toolNames).not.toContain('get_business_domain_summary');
+      expect(toolNames).not.toContain('open_purchase_order_modal');
+      expect(toolNames).not.toContain('fill_purchase_order_form');
+      expect(toolNames).not.toContain('submit_purchase_order');
+      expect(toolNames).not.toContain('close_purchase_order_modal');
     });
 
     it('should prevent memory leaks and duplicate registrations during rapid route mounting/unmounting', () => {
       for (let i = 0; i < 5; i++) {
         const c = new EnterpriseBiComponent(webmcp, dataService);
         c.ngOnInit();
-        expect(webmcp.getTools().length).toBe(9);
+        expect(webmcp.getTools().length).toBe(13);
         c.ngOnDestroy();
         expect(webmcp.getTools().length).toBe(0);
       }
@@ -287,6 +309,143 @@ describe('EnterpriseBiComponent (WebMCP Tools & Reactive Dashboard)', () => {
       const item = dataService.inventory()[0];
       component.quickReorder(item.sku, 20);
       expect(dataService.reorderLog().length).toBe(1);
+    });
+
+    it('should open and close purchase order modal with defaults', () => {
+      expect(component.isPurchaseModalOpen()).toBe(false);
+      component.openPurchaseModal();
+      expect(component.isPurchaseModalOpen()).toBe(true);
+      expect(component.activeTab()).toBe('inventory');
+      expect(component.purchaseForm().sku).toBeTruthy();
+
+      component.closePurchaseModal();
+      expect(component.isPurchaseModalOpen()).toBe(false);
+    });
+
+    it('should open purchase modal prefilled with specific SKU and custom parameters', () => {
+      component.openPurchaseModal('RET-101', 'retail', 50, 'critical', 'Urgent replenishment');
+      expect(component.isPurchaseModalOpen()).toBe(true);
+      expect(component.purchaseForm().sku).toBe('RET-101');
+      expect(component.purchaseForm().domain).toBe('retail');
+      expect(component.purchaseForm().quantity).toBe(50);
+      expect(component.purchaseForm().priority).toBe('critical');
+      expect(component.purchaseForm().notes).toBe('Urgent replenishment');
+      expect(component.calculatedSubtotal()).toBeGreaterThan(0);
+      expect(component.calculatedTotalCost()).toBeGreaterThan(0);
+    });
+
+    it('should reactively handle domain, SKU, and supplier changes in purchase form', () => {
+      component.openPurchaseModal();
+      component.onPurchaseDomainChange('hardware');
+      expect(component.purchaseForm().domain).toBe('hardware');
+      expect(component.purchaseForm().sku).toContain('HDW');
+
+      component.onPurchaseSkuChange('HDW-201');
+      expect(component.purchaseForm().sku).toBe('HDW-201');
+      expect(component.selectedPurchaseItem()?.sku).toBe('HDW-201');
+
+      const suppliers = component.availablePurchaseSuppliers();
+      expect(suppliers.length).toBeGreaterThan(0);
+      component.onPurchaseSupplierChange(suppliers[0].id);
+      expect(component.purchaseForm().supplierId).toBe(suppliers[0].id);
+    });
+
+    it('should adjust quantity and recalculate totals with priority multipliers', () => {
+      component.openPurchaseModal('RET-101', 'retail', 10, 'standard');
+      const baseSubtotal = component.calculatedSubtotal();
+      expect(component.calculatedTotalCost()).toBe(baseSubtotal);
+
+      component.setPurchasePriority('expedited');
+      expect(component.calculatedTotalCost()).toBe(Math.round(baseSubtotal * 1.1 * 100) / 100);
+
+      component.setPurchasePriority('critical');
+      expect(component.calculatedTotalCost()).toBe(Math.round(baseSubtotal * 1.25 * 100) / 100);
+
+      component.adjustPurchaseQuantity(5);
+      expect(component.purchaseForm().quantity).toBe(15);
+    });
+
+    it('should autofill optimal replenishment deficit via autoFillSuggestedReplenishment', () => {
+      const lowItem = dataService.inventory().find((i) => i.status === 'low_stock')!;
+      component.openPurchaseModal(lowItem.sku);
+      component.autoFillSuggestedReplenishment();
+
+      expect(component.isAutoFilled()).toBe(true);
+      expect(component.lastAutoFilledField()).toContain('Quantity');
+      expect(component.purchaseForm().quantity).toBeGreaterThanOrEqual(10);
+    });
+
+    it('should submit purchase order form and generate receipt', () => {
+      component.openPurchaseModal('RET-101', 'retail', 20, 'standard', 'Test order');
+      component.submitPurchaseOrderForm();
+
+      expect(component.purchaseModalSuccessReceipt()).toBeDefined();
+      expect(component.purchaseModalSuccessReceipt()?.sku).toBe('RET-101');
+      expect(component.purchaseModalSuccessReceipt()?.quantity).toBe(20);
+      expect(dataService.reorderLog().length).toBe(1);
+    });
+  });
+
+  describe('WebMCP Purchase Order & Procurement Tools Handlers', () => {
+    it('should execute open_purchase_order_modal WebMCP tool and prefill fields', async () => {
+      const result = (await webmcp.executeTool('open_purchase_order_modal', {
+        sku: 'RET-102',
+        quantity: 30,
+        priority: 'expedited',
+        notes: 'WebMCP agent triggered order',
+      })) as any;
+
+      expect(result.success).toBe(true);
+      expect(result.isOpen).toBe(true);
+      expect(component.isPurchaseModalOpen()).toBe(true);
+      expect(component.purchaseForm().sku).toBe('RET-102');
+      expect(component.purchaseForm().quantity).toBe(30);
+      expect(component.purchaseForm().priority).toBe('expedited');
+      expect(component.purchaseForm().notes).toBe('WebMCP agent triggered order');
+      expect(component.isAutoFilled()).toBe(true);
+    });
+
+    it('should execute fill_purchase_order_form WebMCP tool and autocomplete selects in real-time', async () => {
+      component.openPurchaseModal();
+      const result = (await webmcp.executeTool('fill_purchase_order_form', {
+        sku: 'HDW-201',
+        quantity: 50,
+        priority: 'critical',
+        notes: 'AI Copilot auto-fill test',
+      })) as any;
+
+      expect(result.success).toBe(true);
+      expect(component.purchaseForm().sku).toBe('HDW-201');
+      expect(component.purchaseForm().quantity).toBe(50);
+      expect(component.purchaseForm().priority).toBe('critical');
+      expect(component.isAutoFilled()).toBe(true);
+      expect(result.totalCost).toBeGreaterThan(0);
+    });
+
+    it('should execute submit_purchase_order WebMCP tool and create procurement order', async () => {
+      const result = (await webmcp.executeTool('submit_purchase_order', {
+        sku: 'RET-101',
+        quantity: 25,
+        priority: 'standard',
+        notes: 'Autonomous purchase dispatch',
+      })) as any;
+
+      expect(result.success).toBe(true);
+      expect(result.orderId).toBeDefined();
+      expect(result.sku).toBe('RET-101');
+      expect(result.quantity).toBe(25);
+      expect(dataService.reorderLog().length).toBeGreaterThan(0);
+      expect(component.purchaseModalSuccessReceipt()).toBeDefined();
+    });
+
+    it('should execute close_purchase_order_modal WebMCP tool', async () => {
+      component.openPurchaseModal();
+      expect(component.isPurchaseModalOpen()).toBe(true);
+
+      const result = (await webmcp.executeTool('close_purchase_order_modal', {})) as any;
+      expect(result.success).toBe(true);
+      expect(result.isOpen).toBe(false);
+      expect(component.isPurchaseModalOpen()).toBe(false);
     });
   });
 });

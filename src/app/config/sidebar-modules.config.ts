@@ -33,6 +33,10 @@ export const DEFAULT_SIDEBAR_MODULES: SidebarViewConfig[] = [
       'reorder_inventory_item',
       'filter_inventory_by_domain',
       'get_business_domain_summary',
+      'open_purchase_order_modal',
+      'fill_purchase_order_form',
+      'submit_purchase_order',
+      'close_purchase_order_modal',
     ],
   },
 
