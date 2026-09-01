@@ -37,8 +37,13 @@ This document provides the complete, authoritative specification for all **WebMC
 | **Shell & Orchestration** | [`navigate_to_view`](#27-navigate_to_view) | Global Shell | Autonomous workspace router (`/3d-showroom`, `/enterprise-bi`, etc.) |
 | | [`form_action_runner`](#28-form_action_runner) | `/3d-showroom` | Fills, validates, and submits Angular Reactive Forms |
 | | [`judge_rubric_evaluation`](#29-judge_rubric_evaluation) | `/judge-guide` | Returns automated compliance score and feature checklist |
-| | [`verify_harness`](#30-verify_harness) | `/judge-guide` | Executes end-to-end verification health metrics and test checks |
 | | [`delegate_to_subagent`](#31-delegate_to_subagent) | Global / Copilot | Dynamically synthesizes task delegation to specialized subagents |
+| **In-Browser Agent Memory** | [`mem_save`](#32-mem_save) | Global / Inspector | Saves or updates episodic observations, facts, rules, contexts, preferences |
+| | [`mem_search`](#33-mem_search) | Global / Inspector | Performs BM25 lexical ranking queries across stored agent memories |
+| | [`mem_context`](#34-mem_context) | Global / Inspector | Retrieves consolidated active project context and pinned rules |
+| | [`mem_pin`](#35-mem_pin) | Global / Inspector | Pins a critical memory/rule so it is never evicted from working context |
+| | [`mem_unpin`](#36-mem_unpin) | Global / Inspector | Unpins a previously pinned memory item |
+| | [`mem_session_summary`](#37-mem_session_summary) | Global / Inspector | Records, retrieves, or lists multi-turn session summaries |
 
 ---
 
@@ -577,3 +582,127 @@ interface TakeScreenshotResult {
   "required": ["target_subagent", "objective"]
 }
 ```
+
+---
+
+## 🧠 4. In-Browser Agent Memory Tools
+
+### 32. `mem_save`
+* **Route**: Global / Inspector
+* **Purpose**: Saves or updates an episodic observation, learned fact, business rule, context note, preference, or session note in client-side IndexedDB with automatic BM25 index synchronization.
+
+#### Parameter Schema
+```json
+{
+  "type": "object",
+  "properties": {
+    "topic": { "type": "string", "description": "Unique key or topic identifier for the memory" },
+    "content": { "type": "string", "description": "The detailed content, fact, rule, or observation" },
+    "category": {
+      "type": "string",
+      "enum": ["observation", "fact", "rule", "context", "preference", "session"],
+      "default": "observation",
+      "description": "Category classification"
+    },
+    "tags": { "type": "array", "items": { "type": "string" }, "description": "Searchable tag keywords" },
+    "pinned": { "type": "boolean", "default": false, "description": "If true, pins memory to prevent LRU eviction" },
+    "metadata": { "type": "object", "description": "Optional arbitrary metadata map" }
+  },
+  "required": ["topic", "content"]
+}
+```
+
+---
+
+### 33. `mem_search`
+* **Route**: Global / Inspector
+* **Purpose**: Executes pure TypeScript BM25 lexical search ranking over stored memories with category filters, tag matches, score thresholds, and top-K limits.
+
+#### Parameter Schema
+```json
+{
+  "type": "object",
+  "properties": {
+    "query": { "type": "string", "description": "Search keywords, query string, or topic" },
+    "category": { "type": "string", "description": "Optional category filter" },
+    "tags": { "type": "array", "items": { "type": "string" }, "description": "Filter by tags" },
+    "pinnedOnly": { "type": "boolean", "default": false, "description": "Restrict results to pinned memories" },
+    "topK": { "type": "number", "default": 10, "description": "Maximum ranked results to return" },
+    "minScore": { "type": "number", "default": 0.1, "description": "Minimum BM25 score threshold" }
+  },
+  "required": ["query"]
+}
+```
+
+---
+
+### 34. `mem_context`
+* **Route**: Global / Inspector
+* **Purpose**: Retrieves a consolidated, prompt-ready markdown context block containing active project rules, pinned preferences, and recent observations for LLM system prompt injection.
+
+#### Parameter Schema
+```json
+{
+  "type": "object",
+  "properties": {
+    "category": { "type": "string", "description": "Filter by specific category" },
+    "maxTokens": { "type": "number", "default": 2000, "description": "Estimated token budget limit" },
+    "includePinned": { "type": "boolean", "default": true, "description": "Always prioritize pinned memories" }
+  }
+}
+```
+
+---
+
+### 35. `mem_pin`
+* **Route**: Global / Inspector
+* **Purpose**: Pins a critical memory, rule, or preference by ID or topic so it is never discarded by LRU eviction and is always preloaded into agent context.
+
+#### Parameter Schema
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": { "type": "string", "description": "Unique memory item ID" },
+    "topic": { "type": "string", "description": "Memory topic name to pin" },
+    "pinned": { "type": "boolean", "default": true }
+  }
+}
+```
+
+---
+
+### 36. `mem_unpin`
+* **Route**: Global / Inspector
+* **Purpose**: Unpins a previously pinned memory item by ID or topic.
+
+#### Parameter Schema
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": { "type": "string", "description": "Unique memory item ID" },
+    "topic": { "type": "string", "description": "Memory topic name to unpin" }
+  }
+}
+```
+
+---
+
+### 37. `mem_session_summary`
+* **Route**: Global / Inspector
+* **Purpose**: Records, retrieves, or lists multi-turn agent session summaries with key learnings, topics covered, and tool invocation counts.
+
+#### Parameter Schema
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": { "type": "string", "enum": ["get", "save", "list"], "default": "save" },
+    "summary": { "type": "string", "description": "Session summary narrative" },
+    "sessionId": { "type": "string", "description": "Unique session ID" },
+    "keyLearnings": { "type": "array", "items": { "type": "string" } }
+  }
+}
+```
+

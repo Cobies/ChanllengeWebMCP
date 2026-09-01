@@ -118,7 +118,65 @@ describe('App Root Component & WebMCP Runtime', () => {
       expect(showroomMainClasses).toContain('h-full');
     });
   });
+
+  describe('WebMCP In-Browser Memory End-to-End Integration', () => {
+    it('should register and execute declarative memory tools via WebMcpService', async () => {
+      const {
+        WebMcpMemoryService,
+        WebMcpInMemoryStore,
+        WebMcpBm25SearchEngine,
+      } = await import('@webmcp/angular');
+
+      const inMemoryStore = new WebMcpInMemoryStore({ maxMemories: 500 });
+      const searchEngine = new WebMcpBm25SearchEngine();
+      const memoryService = new WebMcpMemoryService(
+        { autoRegisterTools: true },
+        inMemoryStore,
+        searchEngine,
+        webmcpService
+      );
+
+      await memoryService.init();
+
+      // Verify all declarative memory tools are registered in WebMCP
+      const toolNames = webmcpService.registeredTools().map((t) => t.name);
+      expect(toolNames).toContain('mem_save');
+      expect(toolNames).toContain('mem_search');
+      expect(toolNames).toContain('mem_context');
+      expect(toolNames).toContain('mem_pin');
+      expect(toolNames).toContain('mem_unpin');
+      expect(toolNames).toContain('mem_session_summary');
+
+      // Execute mem_save via WebMCP tool execution
+      const saveResult = await webmcpService.executeTool<any>('mem_save', {
+        topic: 'system_architecture_rule',
+        category: 'rule',
+        content: 'All state mutations must use Angular 22 Signals',
+        tags: ['angular', 'signals', 'architecture'],
+        pinned: true,
+      });
+
+      expect(saveResult.success).toBe(true);
+      expect(saveResult.item).toBeDefined();
+      expect(saveResult.item.topic).toBe('system_architecture_rule');
+
+      // Execute mem_search via WebMCP tool execution
+      const searchResult = await webmcpService.executeTool<any>('mem_search', {
+        query: 'Angular Signals',
+      });
+
+      expect(searchResult.count).toBe(1);
+      expect(searchResult.results[0].item.topic).toBe('system_architecture_rule');
+
+      // Execute mem_context via WebMCP tool execution
+      const contextResult = await webmcpService.executeTool<any>('mem_context', {});
+      expect(contextResult.context).toContain('Pinned Rules & Invariants');
+      expect(contextResult.context).toContain('All state mutations must use Angular 22 Signals');
+    });
+  });
 });
+
+
 
 
 

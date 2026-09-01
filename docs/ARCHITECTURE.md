@@ -37,19 +37,20 @@ This document outlines the end-to-end system architecture of the **WebMCP Angula
 │  └────────────────────────────────────────────────┬─────────────────────────────────────────────────┘  │
 └───────────────────────────────────────────────────┼────────────────────────────────────────────────────┘
                                                     │
-                      ┌─────────────────────────────┼─────────────────────────────┐
-                      ▼                             ▼                             ▼
-┌──────────────────────────────────────┐ ┌──────────────────────────────┐ ┌──────────────────────────────┐
-│     THREE.JS SPATIAL ENGINE          │ │     ENTERPRISE BI ENGINE     │ │      SUBAGENTS SDK           │
-│  ┌────────────────────────────────┐  │ │ ┌──────────────────────────┐ │ │ ┌──────────────────────────┐ │
-│  │ WebmcpThreeSceneBridge         │  │ │ │ EnterpriseBiStateService │ │ │ │ SubAgentRegistryService  │ │
-│  │ - SceneActionBus (Frame-Sync)  │  │ │ │ - 4 Domain Adapters:     │ │ │ │ - Dynamic Tool Scoper    │ │
-│  │ - CameraInterpolator (Lerp)    │  │ │ │   * CloudFinOpsAdapter   │ │ │ │ - createSubAgent Factory │ │
-│  │ - 2D/3D CAD Drawing & Extrude  │  │ │ │   * SupplyChainAdapter   │ │ │ │ - createDelegationTool   │ │
-│  │ - PBR Material Engine          │  │ │ │   * FinancialRiskAdapter │ │ │ │ - Ephemeral Multi-Turn   │ │
-│  │ - ViewportCaptureService       │  │ │ │   * RetentionAdapter     │ │ │ │   Execution Loop         │ │
-│  └────────────────────────────────┘  │ │ └──────────────────────────┘ │ │ └──────────────────────────┘ │
-└──────────────────────────────────────┘ └──────────────────────────────┘ └──────────────────────────────┘
+                                                    ▼
+                       ┌────────────────────────────┼────────────────────────────┬────────────────────────────┐
+                       ▼                            ▼                            ▼                            ▼
+┌──────────────────────────────────────┐ ┌──────────────────────────────┐ ┌──────────────────────────────┐ ┌──────────────────────────────┐
+│     THREE.JS SPATIAL ENGINE          │ │     ENTERPRISE BI ENGINE     │ │      SUBAGENTS SDK           │ │      IN-BROWSER MEMORY       │
+│  ┌────────────────────────────────┐  │ │ ┌──────────────────────────┐ │ │ ┌──────────────────────────┐ │ │ ┌──────────────────────────┐ │
+│  │ WebmcpThreeSceneBridge         │  │ │ │ EnterpriseBiStateService │ │ │ │ SubAgentRegistryService  │ │ │ │ WebMcpMemoryService      │ │
+│  │ - SceneActionBus (Frame-Sync)  │  │ │ │ - 4 Domain Adapters:     │ │ │ │ - Dynamic Tool Scoper    │ │ │ │ - WebMcpIndexedDbStore   │ │
+│  │ - CameraInterpolator (Lerp)    │  │ │ │   * CloudFinOpsAdapter   │ │ │ │ - createSubAgent Factory │ │ │ │ - WebMcpBm25SearchEngine │ │
+│  │ - 2D/3D CAD Drawing & Extrude  │  │ │ │   * SupplyChainAdapter   │ │ │ │ - createDelegationTool   │ │ │ │ - WebMcpMemoryInterceptor│ │
+│  │ - PBR Material Engine          │  │ │ │   * FinancialRiskAdapter │ │ │ │ - Ephemeral Multi-Turn   │ │ │ │ - WebMcpNavigationList'r│ │
+│  │ - ViewportCaptureService       │  │ │ │   * RetentionAdapter     │ │ │ │   Execution Loop         │ │ │ │ - 6 Standard mem_* Tools │ │
+│  └────────────────────────────────┘  │ │ └──────────────────────────┘ │ │ └──────────────────────────┘ │ │ └──────────────────────────┘ │
+└──────────────────────────────────────┘ └──────────────────────────────┘ └──────────────────────────────┘ └──────────────────────────────┘
 ```
 
 ---
@@ -99,11 +100,14 @@ flowchart TB
             Retention["CustomerRetentionAdapter"]
         end
 
-        subgraph SubAgents["SubAgents SDK"]
-            SubRegistry["SubAgentRegistryService"]
-            Scoper["Tool Scoper (filterToolsForSubAgent)"]
-            DelegationTool["delegate_to_subagent Synthesis"]
-            Runner["SubAgentRunnerService (Isolated Loop)"]
+        subgraph MemoryEngine["In-Browser Memory Engine"]
+            MemService["WebMcpMemoryService (Signals)"]
+            MemStore["WebMcpIndexedDbStore (webmcp_memory_db)"]
+            MemFallback["WebMcpInMemoryStore (SSR Fallback)"]
+            BM25Engine["WebMcpBm25SearchEngine (RSJ IDF)"]
+            MemInterceptor["WebMcpMemoryInterceptor (Anti-Recursion)"]
+            NavListener["WebMcpNavigationListener (Route Context)"]
+            MemTools["6 Declarative Tools: mem_*"]
         end
     end
 
@@ -114,6 +118,7 @@ flowchart TB
     Resolver -- Fallback --> Emulator
     Service --> Pipeline
     Pipeline --> Signals
+    Pipeline --> MemInterceptor
 
     R1 --> ThreeBridge
     ThreeBridge --> ActionBus --> ThreeCanvas
@@ -123,10 +128,18 @@ flowchart TB
     BIState --> BIRegistry
     BIRegistry --> FinOps & Supply & Risk & Retention
 
+    R3 --> MemService
+    MemService --> MemStore & MemFallback
+    MemService --> BM25Engine
+    MemService --> MemTools
+    MemInterceptor --> MemService
+    NavListener --> MemService
+
     CopilotChat --> SubRegistry
     SubRegistry --> Scoper
     SubRegistry --> DelegationTool
     SubRegistry --> Runner
+    CopilotChat -. Optional Context .-> MemService
 ```
 
 ---
@@ -201,6 +214,27 @@ An Inversion-of-Control (IoC) subagent orchestration engine enabling parent agen
 - **Dynamic Delegation Tool Synthesis**: Generates OpenAI-compatible function calling schemas with a live `enum` of available subagents and an up-to-date description of registered capabilities.
 - **Context Window Token Optimization**: Subagents execute multi-turn loops in isolated ephemeral scopes, returning concise executive receipts (`SubAgentResult`) to prevent parent context bloat.
 
+### 6. In-Browser Agent Memory Engine (`@cobies/webmcp-angular`)
+A zero-dependency, client-side episodic and semantic memory system that provides AI agents with continuous context and recall directly in the browser.
+
+- **Dual-Backend Storage Engine (`IWebMcpMemoryStore`)**:
+  - `WebMcpIndexedDbStore`: IndexedDB persistence (`webmcp_memory_db`) with compound indexes (`by_topic`, `by_category`, `by_pinned`, `by_updated`, `by_tags`) and LRU quota eviction.
+  - `WebMcpInMemoryStore`: Ephemeral in-memory fallback for SSR hydration and private browser contexts.
+- **Pure TypeScript BM25 Lexical Search (`WebMcpBm25SearchEngine`)**:
+  - Robertson-Spärck Jones IDF scoring with field-weighted boosts ($\text{topic}: 2.0\times, \text{tags}: 1.5\times, \text{content}: 1.0\times$).
+  - Multilingual Unicode tokenizer with stopword pruning and in-memory incremental inverted index.
+- **6 Standardized WebMCP Memory Tools**:
+  - `mem_save`: Persists or updates episodic observations, facts, rules, contexts, preferences, or sessions.
+  - `mem_search`: BM25 lexical ranking queries with category, tag, and date filtering.
+  - `mem_context`: Formats consolidated prompt-ready context blocks with pinned rules.
+  - `mem_pin` / `mem_unpin`: Pins or unpins critical directives to prevent eviction.
+  - `mem_session_summary`: Multi-turn session summarization and key learning tracking.
+- **Reactive Signals State (`WebMcpMemoryService`)**:
+  - Signals (`memories()`, `pinnedMemories()`, `stats()`, `isReady()`, `recentQueries()`) powering the live Inspector UI.
+- **Passive Execution Interceptors**:
+  - `WebMcpMemoryInterceptor`: Automatically records non-memory tool outcomes and errors via `WEBMCP_INTERCEPTORS` with an anti-recursion guard on `mem_*`.
+  - `WebMcpNavigationListener`: Captures router navigation changes with URL and secret token redaction.
+
 ---
 
 ## ⚡ Synchronous & Reactive Data Flow
@@ -268,6 +302,41 @@ sequenceDiagram
     SubAgent-->>Registry: Return SubAgentResult (Executive Summary Receipt)
     Registry-->>Orchestrator: Return concise summary (Tokens saved: ~85%)
     Orchestrator-->>User: "Completed slab construction and extrusion of 3.5m."
+```
+
+### 3. Orchestrator-Driven Memory & Context Lifecycle
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant Copilot as CopilotChatComponent
+    participant Bridge as CopilotBridgeService (Orchestrator)
+    participant MemService as WebMcpMemoryService
+    participant Store as WebMcpIndexedDbStore
+    participant Interceptor as WebMcpMemoryInterceptor
+    participant LLM as LLM Bridge Proxy
+
+    Note over Bridge: 1. PRE-TURN: Context Enrichment
+    Bridge->>MemService: Read pinnedMemories() & active context
+    MemService-->>Bridge: [PREFERENCE] brand_color: #00f0ff
+    Bridge->>Bridge: Inject memory block into system prompt
+
+    User->>Copilot: "Remember that the maximum warehouse budget is $50,000"
+    Copilot->>Bridge: sendMessage()
+    Bridge->>LLM: Send enriched prompt + function tools
+
+    Note over LLM: 2. IN-TURN: Proactive Memory Capture
+    LLM-->>Bridge: Tool Call: mem_save({topic: 'warehouse_budget', content: '$50,000', category: 'rule', pinned: true})
+    Bridge->>MemService: save({topic: 'warehouse_budget', content: '$50,000', pinned: true})
+    MemService->>Store: Persist to IndexedDB & sync BM25 index
+    Store-->>MemService: Stored successfully
+    MemService-->>Bridge: {success: true, item: MemoryItem}
+    Bridge->>LLM: Return tool response
+    LLM-->>Bridge: "Got it! I saved and pinned your rule: maximum warehouse budget is $50,000."
+
+    Note over Interceptor: 3. POST-TURN: Passive Interception (for other tools)
+    Bridge->>Copilot: Display final assistant message
 ```
 
 ---

@@ -33,3 +33,6 @@ export { WebmcpFormRunnerService as WebMcpFormRunnerService } from './forms/form
 // SubAgents SDK
 export * from './subagents';
 
+// In-Browser Memory System
+export * from './memory';
+

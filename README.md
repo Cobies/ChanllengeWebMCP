@@ -3,13 +3,14 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Angular 22](https://img.shields.io/badge/Angular-22.0-dd0031.svg?logo=angular)](https://angular.dev)
 [![Bun Runtime](https://img.shields.io/badge/Runtime-Bun-f472b6.svg?logo=bun)](https://bun.sh)
-[![Tests: 352 Passing](https://img.shields.io/badge/Tests-352%20Passing-10b981.svg)](docs/ARCHITECTURE.md)
+[![Tests: 483 Passing](https://img.shields.io/badge/Tests-483%20Passing-10b981.svg)](docs/ARCHITECTURE.md)
 [![Tailwind CSS v4](https://img.shields.io/badge/Tailwind-v4.0-38bdf8.svg?logo=tailwindcss)](https://tailwindcss.com)
 [![Three.js](https://img.shields.io/badge/Three.js-WebGL-black.svg?logo=threedotjs)](https://threejs.org)
 [![AI Copilot](https://img.shields.io/badge/AI%20Copilot-Multimodal%20Agent-purple.svg)](docs/SUBAGENTS_SDK.md)
+[![In-Browser Memory](https://img.shields.io/badge/Memory-IndexedDB%20%2B%20BM25-blueviolet.svg)](docs/ARCHITECTURE.md)
 [![W3C WebMCP Standard](https://img.shields.io/badge/WebMCP-W3C%20Standard-emerald.svg)](https://modelcontextprotocol.io)
 
-An enterprise Angular 22 toolkit and multi-route interactive showcase for the **W3C WebMCP (Model Context Protocol in the Browser)** standard. Bridges browser AI agents (Chrome AI, ChatGPT in-app browser, Claude, and **built-in Autonomous AI Copilot**) directly with Angular reactive Signals, client-side Three.js WebGL scenes, enterprise business intelligence analytics, declarative template directives, form automation, multimodal viewport snapshots, and a dynamic **SubAgents Orchestration SDK**.
+An enterprise Angular 22 toolkit and multi-route interactive showcase for the **W3C WebMCP (Model Context Protocol in the Browser)** standard. Bridges browser AI agents (Chrome AI, ChatGPT in-app browser, Claude, and **built-in Autonomous AI Copilot**) directly with Angular reactive Signals, client-side Three.js WebGL scenes, enterprise business intelligence analytics, declarative template directives, form automation, multimodal viewport snapshots, a dynamic **SubAgents Orchestration SDK**, and an **In-Browser Episodic & Semantic Memory Engine**.
 
 ---
 
@@ -17,9 +18,9 @@ An enterprise Angular 22 toolkit and multi-route interactive showcase for the **
 
 Explore the comprehensive documentation guides created for developers, architects, and hackathon judges:
 
-- 🏗️ **[System Architecture & In-Depth Design](docs/ARCHITECTURE.md)**: Full ASCII/Mermaid blueprints, 5-layer architecture breakdown, frame-synchronized WebGL action bus, and reactive data flow sequences.
+- 🏗️ **[System Architecture & In-Depth Design](docs/ARCHITECTURE.md)**: Full ASCII/Mermaid blueprints, 5-layer architecture breakdown, frame-synchronized WebGL action bus, reactive data flow sequences, and in-browser memory subsystem.
 - 🤖 **[Dynamic SubAgents SDK Guide](docs/SUBAGENTS_SDK.md)**: Complete guide to `@cobies/webmcp-angular` subagent registry, multi-strategy tool scoping, ephemeral execution loops, and dynamic function schema synthesis.
-- 🛠️ **[WebMCP Tools API Reference](docs/WEBMCP_TOOLS.md)**: Authoritative parameter contracts, JSON schemas, return payloads, and sample prompts for all 30+ registered WebMCP tools across 3D CAD, BI, and shell domains.
+- 🛠️ **[WebMCP Tools API Reference](docs/WEBMCP_TOOLS.md)**: Authoritative parameter contracts, JSON schemas, return payloads, and sample prompts for all 37 registered WebMCP tools across 3D CAD, BI, shell, and memory domains.
 - 📖 **[Application Views & Workspace Guide](docs/VIEWS_GUIDE.md)**: Detailed manual for all 4 routed workspaces (`/3d-showroom`, `/enterprise-bi`, `/inspector`, `/judge-guide`), modal guides, and copilot drawers.
 - 🏆 **[Devpost Submission & Hackathon Write-up](docs/DEVPOST_SUBMISSION.md)**: Official hackathon submission answering all 4 mandatory criteria prompts, plus a timestamped 3-minute demo video script.
 
@@ -32,21 +33,28 @@ Explore the comprehensive documentation guides created for developers, architect
    - Dynamic WebMCP-to-OpenAI function schema conversion with autonomous multi-turn recursive execution loop (up to 5 turns).
    - Dynamic delegation meta-tool (`delegate_to_subagent`) that offloads complex sub-tasks to specialized domain workers (`3d-specialist`, `analytics-specialist`, `audit-specialist`), saving up to **85% of LLM context tokens**.
 
-2. **🏎️ SketchUp-Style 3D CAD Studio & Multimodal Viewport Vision**:
+2. **🧠 Zero-Backend In-Browser Episodic & Semantic Memory Engine (Engram-Style)**:
+   - **Client-Side Persistence**: `WebMcpIndexedDbStore` with compound indexing (`webmcp_memory_db`) and automatic in-memory fallback for SSR hydration.
+   - **Pure TypeScript BM25 Search**: Fast sub-millisecond lexical search ranking with Robertson-Spärck Jones IDF and field boosts (topic 2x, tags 1.5x).
+   - **6 Standardized Memory Tools**: `mem_save`, `mem_search`, `mem_context`, `mem_pin`, `mem_unpin`, and `mem_session_summary`.
+   - **Orchestrator-Driven Proactivity**: Pre-turn context enrichment in system prompts, proactive memory saving directives, and passive tool outcome interceptors.
+   - **Live Inspector Memory Store**: Dedicated interactive UI tab for auditing memories, testing BM25 queries, and toggling pins.
+
+3. **🏎️ SketchUp-Style 3D CAD Studio & Multimodal Viewport Vision**:
    - Frame-synchronized Three.js WebGL spatial engine (`SceneActionBus`) for camera orbit rotation (`rotate`), zoom (`zoom`), material colors (`change_mesh_color`), animations, and part highlighting.
    - Parametric 2D rubber-band drawing (`cad_draw_shape`) on arbitrary planes (`xz`, `xy`, `yz`) and push-pull solid volume extrusion (`cad_push_pull`).
    - Zero-latency client-side WebGL canvas rasterization (`take_screenshot`) producing base64 image data URLs with rich in-chat preview cards and lightbox expanders.
 
-3. **📊 Enterprise BI & Multi-Domain Supply Chain Intelligence**:
+4. **📊 Enterprise BI & Multi-Domain Supply Chain Intelligence**:
    - **4 Pluggable Domain Adapters**: `CloudFinOpsAdapter`, `SupplyChainAdapter`, `FinancialRiskAdapter`, and `CustomerRetentionAdapter`.
    - Real-time arithmetic aggregations, anomaly detection percentages, and department volume distributions (`calculate_kpi_summary`, `filter_business_data`).
    - Procurement & Purchase Order pipeline (`open_purchase_order_modal`, `fill_purchase_order_form`, `submit_purchase_order`) with cryptographic SHA-256 audit exports (`trigger_analytics_export`).
 
-4. **⚡ Angular 22 Reactive Signals First**:
+5. **⚡ Angular 22 Reactive Signals First**:
    - Pure reactive signals (`signal()`, `computed()`, `effect()`) for state management with zero change-detection penalty.
    - Declarative template directives: `[webmcpTool]`, `[webmcpAction]`, and `toWebMcpTool()`.
 
-5. **🌐 Hybrid Context Sensing & Seamless In-Memory Emulator**:
+6. **🌐 Hybrid Context Sensing & Seamless In-Memory Emulator**:
    - Automatically detects browser-native `window.modelContext` / `navigator.modelContext` (when Chrome flags are active).
    - Transparently falls back to an in-memory `WebMcpEmulator` for standard browsers, node test runners, and instant developer evaluation.
 
@@ -85,15 +93,38 @@ Explore the comprehensive documentation guides created for developers, architect
 │  └────────────────────────────────────────────────┬─────────────────────────────────────────────────┘  │
 └───────────────────────────────────────────────────┼────────────────────────────────────────────────────┘
                                                     │
-                      ┌─────────────────────────────┼─────────────────────────────┐
-                      ▼                             ▼                             ▼
-┌──────────────────────────────────────┐ ┌──────────────────────────────┐ ┌──────────────────────────────┐
-│     THREE.JS SPATIAL ENGINE          │ │     ENTERPRISE BI ENGINE     │ │      SUBAGENTS SDK           │
-│  - WebmcpThreeSceneBridge            │ │ - EnterpriseBiStateService   │ │ - SubAgentRegistryService    │
-│  - SceneActionBus (Frame-Sync)       │ │ - 4 Domain Adapters          │ │ - Tool Scoper & Predicates   │
-│  - 2D/3D CAD Drawing & Extrusion     │ │ - Real-time KPI Aggregation  │ │ - createSubAgent Factory     │
-│  - ViewportCaptureService (Base64)   │ │ - SHA-256 Audit Exports      │ │ - Ephemeral Multi-Turn Loop  │
-└──────────────────────────────────────┘ └──────────────────────────────┘ └──────────────────────────────┘
+                                                    ▼
+                       ┌────────────────────────────┼────────────────────────────┬────────────────────────────┐
+                       ▼                            ▼                            ▼                            ▼
+┌──────────────────────────────────────┐ ┌──────────────────────────────┐ ┌──────────────────────────────┐ ┌──────────────────────────────┐
+│     THREE.JS SPATIAL ENGINE          │ │     ENTERPRISE BI ENGINE     │ │      SUBAGENTS SDK           │ │      IN-BROWSER MEMORY       │
+│  - WebmcpThreeSceneBridge            │ │ - EnterpriseBiStateService   │ │ - SubAgentRegistryService    │ │ - WebMcpMemoryService        │
+│  - SceneActionBus (Frame-Sync)       │ │ - 4 Domain Adapters          │ │ - Tool Scoper & Predicates   │ │ - WebMcpIndexedDbStore       │
+│  - 2D/3D CAD Drawing & Extrusion     │ │ - Real-time KPI Aggregation  │ │ - createSubAgent Factory     │ │ - WebMcpBm25SearchEngine     │
+│  - ViewportCaptureService (Base64)   │ │ - SHA-256 Audit Exports      │ │ - Ephemeral Multi-Turn Loop  │ │ - 6 Declarative mem_* Tools  │
+└──────────────────────────────────────┘ └──────────────────────────────┘ └──────────────────────────────┘ └──────────────────────────────┘
+```
+
+---
+
+## 🧠 In-Browser Episodic & Semantic Memory Code Example
+
+```typescript
+import { ApplicationConfig } from '@angular/core';
+import { provideWebMcp, provideWebMcpMemory } from '@cobies/webmcp-angular';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideWebMcp(),
+    // Registers client-side IndexedDB persistence, BM25 search, and mem_* tools
+    provideWebMcpMemory({
+      dbName: 'webmcp_memory_db',
+      enablePassiveToolCapture: true,
+      enableNavigationCapture: true,
+      maxMemories: 10000,
+    }),
+  ],
+};
 ```
 
 ---
@@ -154,7 +185,7 @@ bun start
 ```
 Open **[http://localhost:4200](http://localhost:4200)** in your browser.
 
-### 3. Run Automated Test Suite (352 Tests)
+### 3. Run Automated Test Suite (483 Tests)
 ```bash
 bun test
 ```

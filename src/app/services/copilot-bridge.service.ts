@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import {
   WebMcpService,
   WebMcpToolDefinition,
+  WebMcpMemoryService,
   SubAgentRegistryService,
   createDelegationTool,
   getDelegationToolDefinition,
@@ -70,6 +71,7 @@ export class CopilotBridgeService {
   private readonly registry?: SidebarModuleRegistryService;
   private readonly subagentRunner?: SubAgentRunnerService;
   private readonly subagentRegistry?: SubAgentRegistryService;
+  private readonly memoryService?: WebMcpMemoryService;
 
   readonly selectedModel = signal<string>('gemini-3.7-flash-high');
   readonly availableModels = signal<BridgeModel[]>(DEFAULT_FALLBACK_MODELS);
@@ -86,7 +88,8 @@ export class CopilotBridgeService {
     @Optional() webmcp?: WebMcpService,
     @Optional() registry?: SidebarModuleRegistryService,
     @Optional() subagentRunner?: SubAgentRunnerService,
-    @Optional() subagentRegistry?: SubAgentRegistryService
+    @Optional() subagentRegistry?: SubAgentRegistryService,
+    @Optional() memoryService?: WebMcpMemoryService
   ) {
     if (http) {
       this.http = http;
@@ -137,6 +140,16 @@ export class CopilotBridgeService {
         this.subagentRegistry = inject(SubAgentRegistryService, { optional: true }) ?? undefined;
       } catch {
         this.subagentRegistry = undefined;
+      }
+    }
+
+    if (memoryService) {
+      this.memoryService = memoryService;
+    } else {
+      try {
+        this.memoryService = inject(WebMcpMemoryService, { optional: true }) ?? undefined;
+      } catch {
+        this.memoryService = undefined;
       }
     }
   }
@@ -278,12 +291,30 @@ export class CopilotBridgeService {
     ];
     const subagentsList = registeredSubagents.length > 0 ? registeredSubagents.join(', ') : 'none';
 
+    let memoryBlock = '';
+    let memoryDirective = '';
+
+    if (this.memoryService && this.memoryService.isReady()) {
+      const pinned = this.memoryService.pinnedMemories();
+      const allMemories = this.memoryService.memories();
+      const relevantMemories = pinned.length > 0 ? pinned : allMemories.slice(0, 5);
+
+      if (relevantMemories.length > 0) {
+        const memoryList = relevantMemories
+          .map((m) => `- [${m.category.toUpperCase()}] ${m.topic}: ${m.content}`)
+          .join('\n');
+        memoryBlock = `\n\n### ACTIVE AGENT MEMORY & PINNED RULES:\n${memoryList}`;
+      }
+
+      memoryDirective = `\n5. MEMORY & PROACTIVE RECALL: You have persistent memory tools available (mem_save, mem_pin, mem_search, mem_context). When the user states preferences, domain constraints, or key rules, proactively call \`mem_save\` or \`mem_pin\` to persist them. Search memory via \`mem_search\` when answering queries about past decisions.`;
+    }
+
     return `You are AI Copilot, an autonomous multimodal AI assistant embedded in the WebMCP Angular Showcase.
 
 ### CURRENT WORKSPACE CONTEXT:
 - Active View: ${currentViewTitle} (ID: ${currentViewId}, Route: ${currentViewRoute})
 - Available WebMCP Tools: ${activeToolsList}
-- Specialists: ${subagentsList}
+- Specialists: ${subagentsList}${memoryBlock}
 
 ### AVAILABLE WORKSPACE VIEWS CATALOG:
 ${catalogTable.trim()}
@@ -292,7 +323,7 @@ ${catalogTable.trim()}
 1. DELEGATION: Call \`delegate_to_subagent\` for multi-step tasks to isolate context and get receipts.
 2. DIRECT TOOLS: Directly execute any tool from 'Available WebMCP Tools'.
 3. CROSS-VIEW ACTIONS: Call \`navigate_to_view\` with \`targetView\` if target tools are in another view.
-4. Tone: Concise, fluid, and human-friendly.`;
+4. Tone: Concise, fluid, and human-friendly.${memoryDirective}`;
   }
 
   /**

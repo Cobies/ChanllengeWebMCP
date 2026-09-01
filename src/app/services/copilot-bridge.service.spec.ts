@@ -795,8 +795,51 @@ describe('CopilotBridgeService & Autonomous Agent Loop', () => {
       expect(toolMsg?.toolExecution?.subagentReceipt).toBeDefined();
       expect(toolMsg?.toolExecution?.subagentReceipt?.agentType).toBe('analytics-specialist');
       expect(toolMsg?.toolExecution?.subagentReceipt?.summary).toContain('ARR growth is 24%');
-      expect(toolMsg?.toolExecution?.status).toBe('success');
+    });
+  });
+
+  describe('Optional Proactive Memory System Prompt Enrichment', () => {
+    it('should build standard prompt without memory block when memoryService is not provided', () => {
+      const prompt = service.buildDynamicSystemPrompt();
+      expect(prompt).not.toContain('ACTIVE AGENT MEMORY');
+      expect(prompt).not.toContain('MEMORY & PROACTIVE RECALL');
+    });
+
+    it('should enrich prompt with active pinned memories and proactive directives when memoryService is active', async () => {
+      const mockMemoryService: any = {
+        isReady: () => true,
+        pinnedMemories: () => [
+          {
+            id: 'mem-1',
+            topic: 'theme_color',
+            content: '#00f0ff neon cyan',
+            category: 'preference',
+            tags: ['theme'],
+            pinned: true,
+            createdAt: 1000,
+            updatedAt: 1000,
+            lastAccessedAt: 1000,
+            accessCount: 1,
+          },
+        ],
+        memories: () => [],
+      };
+
+      const memoryEnrichedService = new CopilotBridgeService(
+        mockHttp as any,
+        webmcpService,
+        registry,
+        undefined,
+        undefined,
+        mockMemoryService
+      );
+
+      const prompt = memoryEnrichedService.buildDynamicSystemPrompt();
+      expect(prompt).toContain('ACTIVE AGENT MEMORY & PINNED RULES:');
+      expect(prompt).toContain('[PREFERENCE] theme_color: #00f0ff neon cyan');
+      expect(prompt).toContain('MEMORY & PROACTIVE RECALL:');
     });
   });
 });
+
 

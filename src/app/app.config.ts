@@ -2,7 +2,7 @@ import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideEnvironme
 import { provideHttpClient } from '@angular/common/http';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideClientHydration } from '@angular/platform-browser';
-import { provideWebMcp } from '@webmcp/angular';
+import { provideWebMcp, provideWebMcpMemory } from '@webmcp/angular';
 import { routes } from './app.routes';
 import { provideSidebarModules } from './models/sidebar.models';
 import { DEFAULT_SIDEBAR_MODULES } from './config/sidebar-modules.config';
@@ -25,6 +25,11 @@ export const appConfig: ApplicationConfig = {
       enableEmulatorFallback: true,
       enableBuiltInScreenshot: true,
       logExecutionToConsole: true,
+    }),
+    provideWebMcpMemory({
+      dbName: 'webmcp_memory_db',
+      enablePassiveToolCapture: true,
+      enableNavigationCapture: true,
     }),
     provideSidebarModules(DEFAULT_SIDEBAR_MODULES),
     provideEnterpriseBi([
