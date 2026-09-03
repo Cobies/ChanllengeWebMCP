@@ -484,6 +484,126 @@ describe('WebMcpIndexedDbStore', () => {
       expect(await lruStore.get('unpinned-2')).not.toBeNull();
       expect(await lruStore.get('unpinned-3')).not.toBeNull();
     });
+
+    it('should export stored memories and sessions into a valid bundle', async () => {
+      await store.save(createSampleItem({ id: 'idb-1', topic: 'rules/auth', category: 'rule', tags: ['sec'] }));
+      await store.save(createSampleItem({ id: 'idb-2', topic: 'facts/db', category: 'fact', tags: ['sql'] }));
+      await store.saveSessionSummary({
+        sessionId: 'sess-idb-1',
+        timestamp: 1000,
+        summary: 'IndexedDB migration complete',
+        topicsCovered: ['idb'],
+        keyLearnings: ['Success'],
+        toolsUsedCount: {},
+      });
+
+      const bundle = await store.exportKnowledgeBase();
+      expect(bundle.version).toBe('1.0');
+      expect(bundle.metadata.schemaVersion).toBe('1.0');
+      expect(bundle.metadata.totalCount).toBe(2);
+      expect(bundle.memories.length).toBe(2);
+      expect(bundle.sessions?.length).toBe(1);
+      expect(bundle.sessions?.[0].sessionId).toBe('sess-idb-1');
+    });
+
+    it('should filter export by category and tags', async () => {
+      await store.save(createSampleItem({ id: '1', category: 'rule', tags: ['auth', 'core'] }));
+      await store.save(createSampleItem({ id: '2', category: 'fact', tags: ['db'] }));
+
+      const categoryFiltered = await store.exportKnowledgeBase({ category: 'rule' });
+      expect(categoryFiltered.memories.length).toBe(1);
+      expect(categoryFiltered.memories[0].category).toBe('rule');
+
+      const tagFiltered = await store.exportKnowledgeBase({ tags: ['core'] });
+      expect(tagFiltered.memories.length).toBe(1);
+      expect(tagFiltered.memories[0].id).toBe('1');
+    });
+
+    it('should import bundle in replace mode into IndexedDB', async () => {
+      await store.save(createSampleItem({ id: 'old-idb-1', topic: 'old/topic' }));
+
+      const bundle = {
+        version: '1.0' as const,
+        metadata: {
+          exportedAt: 2000,
+          schemaVersion: '1.0' as const,
+          totalCount: 1,
+        },
+        memories: [
+          createSampleItem({ id: 'new-idb-1', topic: 'new/idb-topic', content: 'Fresh content' }),
+        ],
+        sessions: [
+          {
+            sessionId: 'new-idb-sess',
+            timestamp: 2000,
+            summary: 'Fresh session',
+            topicsCovered: ['fresh'],
+            keyLearnings: ['Imported'],
+            toolsUsedCount: {},
+          },
+        ],
+      };
+
+      const result = await store.importKnowledgeBase(bundle, { mode: 'replace' });
+      expect(result.success).toBe(true);
+      expect(result.importedCount).toBe(1);
+
+      expect(await store.get('old-idb-1')).toBeNull();
+      const newItem = await store.get('new-idb-1');
+      expect(newItem).not.toBeNull();
+      expect(newItem?.topic).toBe('new/idb-topic');
+
+      const sessions = await store.getSessionSummaries();
+      expect(sessions.length).toBe(1);
+      expect(sessions[0].sessionId).toBe('new-idb-sess');
+    });
+
+    it('should import bundle in merge mode with deduplication into IndexedDB', async () => {
+      await store.save(createSampleItem({ id: 'mem-idb-1', topic: 'topic-1', content: 'Original 1' }));
+      await store.save(createSampleItem({ id: 'mem-idb-2', topic: 'topic-2', content: 'Original 2' }));
+
+      const bundle = {
+        version: '1.0' as const,
+        metadata: {
+          exportedAt: 3000,
+          schemaVersion: '1.0' as const,
+          totalCount: 3,
+        },
+        memories: [
+          // 1. Matches by ID
+          createSampleItem({ id: 'mem-idb-1', topic: 'topic-1', content: 'Updated 1 by ID' }),
+          // 2. Matches by topic, different ID
+          createSampleItem({ id: 'other-id', topic: 'topic-2', content: 'Updated 2 by topic' }),
+          // 3. Brand new
+          createSampleItem({ id: 'brand-new-idb', topic: 'topic-brand-new', content: 'Brand new IDB' }),
+        ],
+      };
+
+      const result = await store.importKnowledgeBase(bundle, { mode: 'merge' });
+      expect(result.success).toBe(true);
+      expect(result.importedCount).toBe(3);
+
+      const item1 = await store.get('mem-idb-1');
+      expect(item1?.content).toBe('Updated 1 by ID');
+
+      const item2 = await store.getByTopic('topic-2');
+      expect(item2?.content).toBe('Updated 2 by topic');
+
+      const item3 = await store.get('brand-new-idb');
+      expect(item3?.content).toBe('Brand new IDB');
+    });
+
+    it('should validate bundle format and reject invalid versions in IndexedDB store', async () => {
+      const invalidBundle: any = {
+        version: '2.0',
+        metadata: {},
+        memories: [],
+      };
+      const res = await store.importKnowledgeBase(invalidBundle);
+      expect(res.success).toBe(false);
+      expect(res.errors[0]).toContain('Unsupported bundle version');
+    });
+
   });
 
   describe('SSR / Node.js & Restricted Private Browsing Fallback', () => {

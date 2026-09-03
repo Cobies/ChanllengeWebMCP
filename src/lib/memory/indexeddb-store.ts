@@ -6,6 +6,11 @@ import {
   MemorySessionSummary,
   MemoryStats,
   WebMcpMemoryConfig,
+  MemoryExportBundle,
+  MemoryExportMetadata,
+  MemoryImportMode,
+  MemoryImportOptions,
+  MemoryImportResult,
 } from './memory.types';
 
 const DEFAULT_DB_NAME = 'webmcp_memory_db';
@@ -400,6 +405,260 @@ export class WebMcpIndexedDbStore implements IWebMcpMemoryStore {
 
       req.onerror = () => reject(req.error);
     });
+  }
+
+
+  async exportKnowledgeBase(filter?: {
+    category?: MemoryCategory;
+    tags?: string[];
+  }): Promise<MemoryExportBundle> {
+    if (this.fallbackStore) {
+      return this.fallbackStore.exportKnowledgeBase(filter);
+    }
+
+    const all = await this.getAll();
+    const filtered = all.filter((item) => {
+      if (filter?.category !== undefined && item.category !== filter.category) {
+        return false;
+      }
+      if (filter?.tags && filter.tags.length > 0) {
+        const itemTags = (item.tags || []).map((t) => t.toLowerCase());
+        const matches = filter.tags.some((t) => itemTags.includes(t.toLowerCase()));
+        if (!matches) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    const sessions = await this.getSessionSummaries();
+
+    const metadata: MemoryExportMetadata = {
+      exportedAt: Date.now(),
+      schemaVersion: '1.0',
+      totalCount: filtered.length,
+      source: '@cobies/webmcp-angular',
+      tags: filter?.tags,
+    };
+
+    return {
+      version: '1.0',
+      metadata,
+      memories: filtered.map((m) => this.cloneItem(m)),
+      sessions: sessions.length > 0 ? sessions : undefined,
+    };
+  }
+
+  async importKnowledgeBase(
+    bundle: MemoryExportBundle,
+    options?: MemoryImportOptions
+  ): Promise<MemoryImportResult> {
+    if (this.fallbackStore) {
+      return this.fallbackStore.importKnowledgeBase(bundle, options);
+    }
+
+    const allBefore = await this.getAll();
+    const totalBefore = allBefore.length;
+    const errors: string[] = [];
+    let importedCount = 0;
+    let skippedCount = 0;
+
+    if (!bundle || typeof bundle !== 'object') {
+      return {
+        success: false,
+        importedCount: 0,
+        skippedCount: 0,
+        errors: ['Import bundle must be a non-null object.'],
+        totalBefore,
+        totalAfter: totalBefore,
+      };
+    }
+
+    if (bundle.version !== '1.0') {
+      return {
+        success: false,
+        importedCount: 0,
+        skippedCount: 0,
+        errors: [`Unsupported bundle version "${bundle.version}". Expected "1.0".`],
+        totalBefore,
+        totalAfter: totalBefore,
+      };
+    }
+
+    if (!Array.isArray(bundle.memories)) {
+      return {
+        success: false,
+        importedCount: 0,
+        skippedCount: 0,
+        errors: ['Invalid bundle format: "memories" must be an array.'],
+        totalBefore,
+        totalAfter: totalBefore,
+      };
+    }
+
+    const mode: MemoryImportMode = options?.mode ?? 'merge';
+    const preserveTimestamps = options?.preserveTimestamps ?? true;
+    const now = Date.now();
+
+    if (mode === 'replace') {
+      await this.clear();
+
+      const storeNames =
+        Array.isArray(bundle.sessions) && bundle.sessions.length > 0
+          ? [MEMORIES_STORE, SESSIONS_STORE]
+          : [MEMORIES_STORE];
+
+      const tx = this.db!.transaction(storeNames, 'readwrite');
+      const memStore = tx.objectStore(MEMORIES_STORE);
+
+      for (let i = 0; i < bundle.memories.length; i++) {
+        const raw = bundle.memories[i];
+        if (
+          !raw ||
+          typeof raw !== 'object' ||
+          typeof raw.topic !== 'string' ||
+          !raw.topic.trim() ||
+          typeof raw.content !== 'string'
+        ) {
+          skippedCount++;
+          errors.push(`Item at index ${i} is invalid (missing non-empty topic or content).`);
+          continue;
+        }
+
+        const item: MemoryItem = {
+          id: raw.id || `mem-${now}-${Math.random().toString(36).slice(2, 9)}`,
+          topic: raw.topic.trim(),
+          content: raw.content,
+          category: raw.category ?? 'observation',
+          tags: Array.isArray(raw.tags) ? [...raw.tags] : [],
+          pinned: Boolean(raw.pinned),
+          createdAt: preserveTimestamps && raw.createdAt ? raw.createdAt : now,
+          updatedAt: preserveTimestamps && raw.updatedAt ? raw.updatedAt : now,
+          lastAccessedAt: preserveTimestamps && raw.lastAccessedAt ? raw.lastAccessedAt : now,
+          accessCount: raw.accessCount ?? 0,
+          metadata: raw.metadata ? { ...raw.metadata } : undefined,
+        };
+
+        memStore.put(this.cloneItem(item));
+        importedCount++;
+      }
+
+      if (Array.isArray(bundle.sessions) && bundle.sessions.length > 0) {
+        const sessStore = tx.objectStore(SESSIONS_STORE);
+        for (const sess of bundle.sessions) {
+          if (sess && sess.sessionId) {
+            sessStore.put(sess);
+          }
+        }
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error);
+      });
+    } else {
+      const existingItems = await this.getAll();
+      const byIdMap = new Map<string, MemoryItem>();
+      const byTopicMap = new Map<string, MemoryItem>();
+
+      for (const item of existingItems) {
+        byIdMap.set(item.id, item);
+        byTopicMap.set(item.topic, item);
+      }
+
+      const storeNames =
+        Array.isArray(bundle.sessions) && bundle.sessions.length > 0
+          ? [MEMORIES_STORE, SESSIONS_STORE]
+          : [MEMORIES_STORE];
+
+      const tx = this.db!.transaction(storeNames, 'readwrite');
+      const memStore = tx.objectStore(MEMORIES_STORE);
+
+      for (let i = 0; i < bundle.memories.length; i++) {
+        const raw = bundle.memories[i];
+        if (
+          !raw ||
+          typeof raw !== 'object' ||
+          typeof raw.topic !== 'string' ||
+          !raw.topic.trim() ||
+          typeof raw.content !== 'string'
+        ) {
+          skippedCount++;
+          errors.push(`Item at index ${i} is invalid (missing non-empty topic or content).`);
+          continue;
+        }
+
+        const topic = raw.topic.trim();
+        let existing: MemoryItem | undefined;
+
+        if (raw.id && byIdMap.has(raw.id)) {
+          existing = byIdMap.get(raw.id);
+        } else if (byTopicMap.has(topic)) {
+          existing = byTopicMap.get(topic);
+        }
+
+        if (existing) {
+          existing.content = raw.content;
+          if (raw.category) existing.category = raw.category;
+          if (Array.isArray(raw.tags)) existing.tags = [...raw.tags];
+          if (raw.pinned !== undefined) existing.pinned = Boolean(raw.pinned);
+          if (raw.metadata) existing.metadata = { ...existing.metadata, ...raw.metadata };
+          existing.updatedAt = preserveTimestamps && raw.updatedAt ? raw.updatedAt : now;
+          if (raw.accessCount !== undefined) {
+            existing.accessCount = Math.max(existing.accessCount || 0, raw.accessCount);
+          }
+          memStore.put(this.cloneItem(existing));
+          importedCount++;
+        } else {
+          const newItem: MemoryItem = {
+            id: raw.id || `mem-${now}-${Math.random().toString(36).slice(2, 9)}`,
+            topic,
+            content: raw.content,
+            category: raw.category ?? 'observation',
+            tags: Array.isArray(raw.tags) ? [...raw.tags] : [],
+            pinned: Boolean(raw.pinned),
+            createdAt: preserveTimestamps && raw.createdAt ? raw.createdAt : now,
+            updatedAt: preserveTimestamps && raw.updatedAt ? raw.updatedAt : now,
+            lastAccessedAt: preserveTimestamps && raw.lastAccessedAt ? raw.lastAccessedAt : now,
+            accessCount: raw.accessCount ?? 0,
+            metadata: raw.metadata ? { ...raw.metadata } : undefined,
+          };
+          byIdMap.set(newItem.id, newItem);
+          byTopicMap.set(newItem.topic, newItem);
+          memStore.put(this.cloneItem(newItem));
+          importedCount++;
+        }
+      }
+
+      if (Array.isArray(bundle.sessions) && bundle.sessions.length > 0) {
+        const sessStore = tx.objectStore(SESSIONS_STORE);
+        for (const sess of bundle.sessions) {
+          if (sess && sess.sessionId) {
+            sessStore.put(sess);
+          }
+        }
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error);
+      });
+
+      const maxMemories = this.config?.maxMemories ?? 10000;
+      await this.enforceQuota(maxMemories);
+    }
+
+    const allAfter = await this.getAll();
+    return {
+      success: errors.length === 0,
+      importedCount,
+      skippedCount,
+      errors,
+      totalBefore,
+      totalAfter: allAfter.length,
+    };
   }
 
   private async activateFallback(): Promise<void> {

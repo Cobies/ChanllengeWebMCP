@@ -298,5 +298,158 @@ describe('InspectorComponent (WebMCP Live Inspector & Memory Store UI)', () => {
       expect(inspector.getCategoryBadgeClass('unknown_category' as any)).toContain('slate');
     });
   });
-});
 
+  describe('Knowledge Base Export & Import UI Actions', () => {
+    it('should trigger export and set positive status feedback', async () => {
+      await memoryService.save({
+        topic: 'export_test',
+        content: 'Export payload testing',
+        category: 'rule',
+      });
+
+      const origWindow = (globalThis as any).window;
+      const origDoc = (globalThis as any).document;
+      const origURL = (globalThis as any).URL;
+
+      try {
+        let downloadTriggered = false;
+        (globalThis as any).window = globalThis;
+        (globalThis as any).document = {
+          createElement: () => ({
+            href: '',
+            download: '',
+            click: () => {
+              downloadTriggered = true;
+            },
+          }),
+          body: {
+            appendChild: () => {},
+            removeChild: () => {},
+          },
+        };
+        (globalThis as any).URL = {
+          createObjectURL: () => 'blob:mock',
+          revokeObjectURL: () => {},
+        };
+
+        await inspector.exportKnowledgeBase('test-export.json');
+        expect(downloadTriggered).toBe(true);
+
+        const feedback = inspector.statusFeedback();
+        expect(feedback).not.toBeNull();
+        expect(feedback?.type).toBe('success');
+        expect(feedback?.message).toContain('exported successfully');
+
+        // Test manual clear of feedback
+        inspector.clearFeedback();
+        expect(inspector.statusFeedback()).toBeNull();
+      } finally {
+        if (origWindow === undefined) {
+          delete (globalThis as any).window;
+        } else {
+          (globalThis as any).window = origWindow;
+        }
+        if (origDoc === undefined) {
+          delete (globalThis as any).document;
+        } else {
+          (globalThis as any).document = origDoc;
+        }
+        if (origURL === undefined) {
+          delete (globalThis as any).URL;
+        } else {
+          (globalThis as any).URL = origURL;
+        }
+      }
+    });
+
+    it('should import knowledge base from JSON and update statusFeedback signal', async () => {
+      const bundleJson = JSON.stringify({
+        version: '1.0',
+        metadata: {
+          exportedAt: Date.now(),
+          schemaVersion: '1.0',
+          totalCount: 1,
+        },
+        memories: [
+          {
+            id: 'imported_ui_mem',
+            topic: 'imported_ui_topic',
+            content: 'Successfully imported from UI action',
+            category: 'rule',
+            tags: ['ui', 'import'],
+            pinned: true,
+            createdAt: 1000,
+            updatedAt: 1000,
+            lastAccessedAt: 1000,
+            accessCount: 0,
+          },
+        ],
+      });
+
+      const result = await inspector.importKnowledgeBaseFromJson(bundleJson);
+      expect(result.success).toBe(true);
+      expect(result.importedCount).toBe(1);
+
+      const feedback = inspector.statusFeedback();
+      expect(feedback).not.toBeNull();
+      expect(feedback?.type).toBe('success');
+      expect(feedback?.message).toContain('Imported 1 memories successfully');
+
+      expect(inspector.memories().length).toBe(1);
+      expect(inspector.memories()[0].topic).toBe('imported_ui_topic');
+    });
+
+    it('should display error feedback when imported JSON is malformed', async () => {
+      const result = await inspector.importKnowledgeBaseFromJson('{ invalid json');
+      expect(result.success).toBe(false);
+
+      const feedback = inspector.statusFeedback();
+      expect(feedback).not.toBeNull();
+      expect(feedback?.type).toBe('error');
+      expect(feedback?.message).toContain('Import failed');
+    });
+
+    it('should handle onFileSelected event with valid JSON file', async () => {
+      const validJson = JSON.stringify({
+        version: '1.0',
+        metadata: { exportedAt: 100, schemaVersion: '1.0', totalCount: 1 },
+        memories: [
+          {
+            id: 'file_mem',
+            topic: 'file_topic',
+            content: 'File content',
+            category: 'observation',
+            tags: [],
+            pinned: false,
+            createdAt: 100,
+            updatedAt: 100,
+            lastAccessedAt: 100,
+            accessCount: 0,
+          },
+        ],
+      });
+
+      const mockFile = {
+        name: 'test.json',
+        text: async () => validJson,
+      };
+
+      const mockInput = {
+        files: [mockFile],
+        value: 'C:\fakepath\test.json',
+      };
+
+      const mockEvent = {
+        target: mockInput,
+      } as unknown as Event;
+
+      await inspector.onFileSelected(mockEvent);
+
+      expect(mockInput.value).toBe('');
+      const feedback = inspector.statusFeedback();
+      expect(feedback?.type).toBe('success');
+      expect(inspector.memories().some((m) => m.topic === 'file_topic')).toBe(true);
+    });
+  });
+
+});

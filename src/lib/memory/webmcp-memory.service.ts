@@ -24,6 +24,11 @@ import {
   MemorySessionSummary,
   MemoryStats,
   WebMcpMemoryConfig,
+  MemoryExportBundle,
+  MemoryExportMetadata,
+  MemoryImportMode,
+  MemoryImportOptions,
+  MemoryImportResult,
 } from './memory.types';
 import {
   WEBMCP_MEMORY_CONFIG,
@@ -442,6 +447,83 @@ export class WebMcpMemoryService {
   /**
    * Refresh reactive state signals (_memories, _stats).
    */
+
+  /**
+   * Export in-browser knowledge base as a portable bundle.
+   */
+  async exportKnowledgeBase(filter?: {
+    category?: MemoryCategory;
+    tags?: string[];
+  }): Promise<MemoryExportBundle> {
+    return this.store.exportKnowledgeBase(filter);
+  }
+
+  /**
+   * Import knowledge base bundle into storage engine with merge or replace strategy.
+   * Automatically re-synchronizes the BM25 search engine and refreshes reactive signals.
+   */
+  async importKnowledgeBase(
+    bundle: MemoryExportBundle,
+    options?: MemoryImportOptions
+  ): Promise<MemoryImportResult> {
+    const result = await this.store.importKnowledgeBase(bundle, options);
+
+    // CRITICAL: Re-synchronize BM25 search engine and reactive signals
+    this.searchEngine.clear();
+    const all = await this.store.getAll();
+    this.searchEngine.index(all);
+    await this.refreshState();
+
+    return result;
+  }
+
+  /**
+   * Download knowledge base as a portable JSON file in the browser.
+   */
+  async downloadKnowledgeBaseJson(filename?: string): Promise<void> {
+    const bundle = await this.exportKnowledgeBase();
+    const jsonString = JSON.stringify(bundle, null, 2);
+
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download =
+        filename ||
+        `webmcp-knowledge-base-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  /**
+   * Import knowledge base from raw JSON string with full validation and error reporting.
+   */
+  async importKnowledgeBaseFromJson(
+    jsonString: string,
+    options?: MemoryImportOptions
+  ): Promise<MemoryImportResult> {
+    let bundle: MemoryExportBundle;
+    try {
+      bundle = JSON.parse(jsonString);
+    } catch (e: any) {
+      const stats = await this.store.getStats();
+      return {
+        success: false,
+        importedCount: 0,
+        skippedCount: 0,
+        errors: [`JSON parse error: ${e?.message || 'Invalid JSON syntax'}`],
+        totalBefore: stats.totalCount,
+        totalAfter: stats.totalCount,
+      };
+    }
+
+    return this.importKnowledgeBase(bundle, options);
+  }
+
   async refreshState(): Promise<void> {
     const all = await this.store.getAll();
     this._memories.set(all);

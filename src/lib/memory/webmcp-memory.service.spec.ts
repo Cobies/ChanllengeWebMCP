@@ -42,7 +42,7 @@ describe('WebMcpMemoryService (Zoneless Signals & Memory Management)', () => {
     expect(memoryService.stats().engineType).toBe('in-memory');
   });
 
-  it('should auto-register standard 6 memory tools in WebMcpService upon initialization', async () => {
+  it('should auto-register standard 8 memory tools in WebMcpService upon initialization', async () => {
     await memoryService.init();
 
     const registeredTools = webmcpService.getTools();
@@ -54,6 +54,8 @@ describe('WebMcpMemoryService (Zoneless Signals & Memory Management)', () => {
     expect(toolNames).toContain('mem_pin');
     expect(toolNames).toContain('mem_unpin');
     expect(toolNames).toContain('mem_session_summary');
+    expect(toolNames).toContain('mem_export');
+    expect(toolNames).toContain('mem_import');
   });
 
   it('should not register memory tools when autoRegisterTools is false', async () => {
@@ -310,6 +312,200 @@ describe('WebMcpMemoryService (Zoneless Signals & Memory Management)', () => {
     expect(sessions.length).toBe(1);
     expect(sessions[0].sessionId).toBe(session.sessionId);
   });
+
+  describe('Knowledge Base Export & Import with BM25 Index Synchronization', () => {
+    it('should export knowledge base bundle with filtered memories and sessions', async () => {
+      await memoryService.init();
+
+      await memoryService.save({
+        topic: 'architecture/sdd',
+        content: 'Spec-Driven Development reduces hallucination and ensures traceability.',
+        category: 'rule',
+        tags: ['architecture', 'sdd'],
+      });
+
+      await memoryService.save({
+        topic: 'bi/dashboard',
+        content: 'Enterprise BI provides FinOps, retention, and supply chain telemetry.',
+        category: 'fact',
+        tags: ['bi', 'dashboard'],
+      });
+
+      const bundle = await memoryService.exportKnowledgeBase();
+      expect(bundle.version).toBe('1.0');
+      expect(bundle.metadata.schemaVersion).toBe('1.0');
+      expect(bundle.metadata.totalCount).toBe(2);
+      expect(bundle.memories.length).toBe(2);
+
+      const ruleFiltered = await memoryService.exportKnowledgeBase({ category: 'rule' });
+      expect(ruleFiltered.memories.length).toBe(1);
+      expect(ruleFiltered.memories[0].topic).toBe('architecture/sdd');
+    });
+
+    it('should import bundle, re-synchronize BM25 search index, and update reactive signals', async () => {
+      await memoryService.init();
+
+      // Initial state has 1 memory
+      await memoryService.save({
+        topic: 'initial/item',
+        content: 'Initial knowledge base item content.',
+        category: 'observation',
+      });
+      expect(memoryService.memories().length).toBe(1);
+
+      // Now import bundle in merge mode
+      const bundle = {
+        version: '1.0' as const,
+        metadata: {
+          exportedAt: Date.now(),
+          schemaVersion: '1.0' as const,
+          totalCount: 2,
+        },
+        memories: [
+          {
+            id: 'imported-1',
+            topic: 'auth/oauth-pkce',
+            content: 'OAuth PKCE code challenge flow prevents interception attacks.',
+            category: 'rule' as const,
+            tags: ['security', 'oauth'],
+            pinned: true,
+            createdAt: 1000,
+            updatedAt: 1000,
+            lastAccessedAt: 1000,
+            accessCount: 0,
+          },
+          {
+            id: 'imported-2',
+            topic: 'threejs/disposal',
+            content: 'Always dispose geometry, material, and textures to avoid GPU leaks.',
+            category: 'rule' as const,
+            tags: ['3d', 'threejs'],
+            pinned: false,
+            createdAt: 1000,
+            updatedAt: 1000,
+            lastAccessedAt: 1000,
+            accessCount: 0,
+          },
+        ],
+      };
+
+      const result = await memoryService.importKnowledgeBase(bundle, { mode: 'merge' });
+      expect(result.success).toBe(true);
+      expect(result.importedCount).toBe(2);
+
+      // Verify signals are reactively refreshed
+      expect(memoryService.memories().length).toBe(3);
+      expect(memoryService.pinnedMemories().length).toBe(1);
+      expect(memoryService.pinnedMemories()[0].topic).toBe('auth/oauth-pkce');
+      expect(memoryService.stats().totalCount).toBe(3);
+
+      // CRITICAL: Verify BM25 search engine was re-synchronized with imported items
+      const searchResults = await memoryService.search('interception attacks PKCE');
+      expect(searchResults.length).toBeGreaterThanOrEqual(1);
+      expect(searchResults[0].item.topic).toBe('auth/oauth-pkce');
+
+      const threeSearchResults = await memoryService.search('GPU leaks disposal');
+      expect(threeSearchResults.length).toBeGreaterThanOrEqual(1);
+      expect(threeSearchResults[0].item.topic).toBe('threejs/disposal');
+    });
+
+    it('should import knowledge base from raw JSON string', async () => {
+      await memoryService.init();
+
+      const jsonString = JSON.stringify({
+        version: '1.0',
+        metadata: {
+          exportedAt: Date.now(),
+          schemaVersion: '1.0',
+          totalCount: 1,
+        },
+        memories: [
+          {
+            id: 'json-mem-1',
+            topic: 'json/import-test',
+            content: 'JSON import works seamlessly across instances.',
+            category: 'fact',
+            tags: ['json'],
+            pinned: false,
+            createdAt: 2000,
+            updatedAt: 2000,
+            lastAccessedAt: 2000,
+            accessCount: 0,
+          },
+        ],
+      });
+
+      const result = await memoryService.importKnowledgeBaseFromJson(jsonString);
+      expect(result.success).toBe(true);
+      expect(result.importedCount).toBe(1);
+      expect(memoryService.memories().some((m) => m.topic === 'json/import-test')).toBe(true);
+    });
+
+    it('should return error result when importing malformed JSON string', async () => {
+      await memoryService.init();
+
+      const malformedJson = '{ invalid json syntax here...';
+      const result = await memoryService.importKnowledgeBaseFromJson(malformedJson);
+      expect(result.success).toBe(false);
+      expect(result.importedCount).toBe(0);
+      expect(result.errors.length).toBeGreaterThan(0);
+      expect(result.errors[0]).toContain('JSON parse error');
+    });
+
+    it('should handle downloadKnowledgeBaseJson in browser or mock environment', async () => {
+      await memoryService.init();
+
+      const origWindow = (globalThis as any).window;
+      const origDoc = (globalThis as any).document;
+      const origURL = (globalThis as any).URL;
+
+      try {
+        let clickCalled = false;
+        const mockAnchor = {
+          href: '',
+          download: '',
+          click: () => {
+            clickCalled = true;
+          },
+        };
+
+        (globalThis as any).window = globalThis;
+        (globalThis as any).document = {
+          createElement: (tag: string) => (tag === 'a' ? mockAnchor : {}),
+          body: {
+            appendChild: () => {},
+            removeChild: () => {},
+          },
+        };
+        (globalThis as any).URL = {
+          createObjectURL: () => 'blob:mock-url',
+          revokeObjectURL: () => {},
+        };
+
+        await memoryService.downloadKnowledgeBaseJson('custom-kb.json');
+        expect(clickCalled).toBe(true);
+        expect(mockAnchor.download).toBe('custom-kb.json');
+        expect(mockAnchor.href).toBe('blob:mock-url');
+      } finally {
+        if (origWindow === undefined) {
+          delete (globalThis as any).window;
+        } else {
+          (globalThis as any).window = origWindow;
+        }
+        if (origDoc === undefined) {
+          delete (globalThis as any).document;
+        } else {
+          (globalThis as any).document = origDoc;
+        }
+        if (origURL === undefined) {
+          delete (globalThis as any).URL;
+        } else {
+          (globalThis as any).URL = origURL;
+        }
+      }
+    });
+  });
+
 });
 
 describe('provideWebMcpMemory Provider Factory & DI Resolution', () => {

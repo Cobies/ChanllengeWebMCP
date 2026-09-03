@@ -73,3 +73,36 @@ export interface WebMcpMemoryConfig {
   maxMemories?: number; // Max records before LRU pruning of unpinned items (Default: 10000)
   autoRegisterTools?: boolean; // Default: true
 }
+
+export interface MemoryExportMetadata {
+  exportedAt: number;
+  schemaVersion: '1.0';
+  totalCount: number;
+  source?: string;
+  tags?: string[];
+  description?: string;
+  custom?: Record<string, unknown>;
+}
+
+export interface MemoryExportBundle {
+  version: '1.0';
+  metadata: MemoryExportMetadata;
+  memories: MemoryItem[];
+  sessions?: MemorySessionSummary[];
+}
+
+export type MemoryImportMode = 'merge' | 'replace';
+
+export interface MemoryImportOptions {
+  mode?: MemoryImportMode;
+  preserveTimestamps?: boolean;
+}
+
+export interface MemoryImportResult {
+  success: boolean;
+  importedCount: number;
+  skippedCount: number;
+  errors: string[];
+  totalBefore: number;
+  totalAfter: number;
+}

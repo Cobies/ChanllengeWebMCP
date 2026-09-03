@@ -240,4 +240,182 @@ describe('WebMcpInMemoryStore', () => {
       expect(limited[0].sessionId).toBe('sess-2');
     });
   });
+
+  describe('Knowledge Base Export & Import', () => {
+    it('should export stored memories and sessions into a valid bundle', async () => {
+      await store.save(createSampleItem({ id: 'mem-1', topic: 'rules/auth', category: 'rule', tags: ['sec'] }));
+      await store.save(createSampleItem({ id: 'mem-2', topic: 'facts/db', category: 'fact', tags: ['pg'] }));
+      await store.saveSessionSummary({
+        sessionId: 'sess-1',
+        timestamp: 1000,
+        summary: 'Database migration complete',
+        topicsCovered: ['db'],
+        keyLearnings: ['PG 16 upgraded'],
+        toolsUsedCount: {},
+      });
+
+      const bundle = await store.exportKnowledgeBase();
+      expect(bundle.version).toBe('1.0');
+      expect(bundle.metadata.schemaVersion).toBe('1.0');
+      expect(bundle.metadata.totalCount).toBe(2);
+      expect(bundle.memories.length).toBe(2);
+      expect(bundle.sessions?.length).toBe(1);
+      expect(bundle.sessions?.[0].sessionId).toBe('sess-1');
+    });
+
+    it('should filter export by category and tags', async () => {
+      await store.save(createSampleItem({ id: '1', category: 'rule', tags: ['auth', 'core'] }));
+      await store.save(createSampleItem({ id: '2', category: 'fact', tags: ['db'] }));
+      await store.save(createSampleItem({ id: '3', category: 'rule', tags: ['billing'] }));
+
+      const categoryFiltered = await store.exportKnowledgeBase({ category: 'rule' });
+      expect(categoryFiltered.memories.length).toBe(2);
+      expect(categoryFiltered.memories.every((m) => m.category === 'rule')).toBe(true);
+
+      const tagFiltered = await store.exportKnowledgeBase({ tags: ['core'] });
+      expect(tagFiltered.memories.length).toBe(1);
+      expect(tagFiltered.memories[0].id).toBe('1');
+    });
+
+    it('should validate bundle format and reject invalid versions', async () => {
+      const invalidVersionBundle: any = {
+        version: '2.0',
+        metadata: { exportedAt: 1000, schemaVersion: '1.0', totalCount: 0 },
+        memories: [],
+      };
+      const res = await store.importKnowledgeBase(invalidVersionBundle);
+      expect(res.success).toBe(false);
+      expect(res.errors.length).toBeGreaterThan(0);
+      expect(res.errors[0]).toContain('Unsupported bundle version');
+
+      const nonArrayMemories: any = {
+        version: '1.0',
+        metadata: {},
+        memories: 'invalid',
+      };
+      const res2 = await store.importKnowledgeBase(nonArrayMemories);
+      expect(res2.success).toBe(false);
+      expect(res2.errors[0]).toContain('"memories" must be an array');
+    });
+
+    it('should import bundle in replace mode, wiping prior state', async () => {
+      await store.save(createSampleItem({ id: 'old-1', topic: 'old/topic' }));
+      await store.saveSessionSummary({
+        sessionId: 'old-sess',
+        timestamp: 500,
+        summary: 'Old summary',
+        topicsCovered: [],
+        keyLearnings: [],
+        toolsUsedCount: {},
+      });
+
+      const bundle = {
+        version: '1.0' as const,
+        metadata: {
+          exportedAt: 2000,
+          schemaVersion: '1.0' as const,
+          totalCount: 1,
+        },
+        memories: [
+          createSampleItem({ id: 'new-1', topic: 'new/topic', content: 'New content' }),
+        ],
+        sessions: [
+          {
+            sessionId: 'new-sess',
+            timestamp: 2000,
+            summary: 'New summary',
+            topicsCovered: ['new'],
+            keyLearnings: ['Imported'],
+            toolsUsedCount: {},
+          },
+        ],
+      };
+
+      const result = await store.importKnowledgeBase(bundle, { mode: 'replace' });
+      expect(result.success).toBe(true);
+      expect(result.importedCount).toBe(1);
+      expect(result.totalBefore).toBe(1);
+      expect(result.totalAfter).toBe(1);
+
+      // Verify old item is gone and new item exists
+      expect(await store.get('old-1')).toBeNull();
+      const newItem = await store.get('new-1');
+      expect(newItem).not.toBeNull();
+      expect(newItem?.topic).toBe('new/topic');
+
+      // Verify sessions replaced
+      const sessions = await store.getSessionSummaries();
+      expect(sessions.length).toBe(1);
+      expect(sessions[0].sessionId).toBe('new-sess');
+    });
+
+    it('should import bundle in merge mode with deduplication by ID and topic', async () => {
+      // Existing item 1: id matches bundle item
+      await store.save(createSampleItem({ id: 'mem-1', topic: 'topic-1', content: 'Original content 1' }));
+      // Existing item 2: topic matches bundle item with different ID
+      await store.save(createSampleItem({ id: 'mem-2', topic: 'topic-2', content: 'Original content 2' }));
+      // Existing item 3: untouched
+      await store.save(createSampleItem({ id: 'mem-3', topic: 'topic-3', content: 'Untouched content' }));
+
+      const bundle = {
+        version: '1.0' as const,
+        metadata: {
+          exportedAt: 3000,
+          schemaVersion: '1.0' as const,
+          totalCount: 3,
+        },
+        memories: [
+          // 1. Matches by ID
+          createSampleItem({ id: 'mem-1', topic: 'topic-1', content: 'Updated content 1' }),
+          // 2. Matches by topic, different ID in bundle
+          createSampleItem({ id: 'different-id', topic: 'topic-2', content: 'Updated content 2 by topic' }),
+          // 3. Brand new item
+          createSampleItem({ id: 'mem-brand-new', topic: 'topic-brand-new', content: 'Brand new' }),
+        ],
+      };
+
+      const result = await store.importKnowledgeBase(bundle, { mode: 'merge' });
+      expect(result.success).toBe(true);
+      expect(result.importedCount).toBe(3);
+      expect(result.totalBefore).toBe(3);
+      expect(result.totalAfter).toBe(4); // mem-1, mem-2, mem-3, mem-brand-new
+
+      // Verify mem-1 was updated
+      const item1 = await store.get('mem-1');
+      expect(item1?.content).toBe('Updated content 1');
+
+      // Verify mem-2 was updated in place (without duplicate topic)
+      const item2 = await store.getByTopic('topic-2');
+      expect(item2?.id).toBe('mem-2');
+      expect(item2?.content).toBe('Updated content 2 by topic');
+
+      // Verify brand new was inserted
+      const itemNew = await store.get('mem-brand-new');
+      expect(itemNew?.content).toBe('Brand new');
+    });
+
+    it('should skip invalid items in bundle and collect errors without crashing', async () => {
+      const bundle = {
+        version: '1.0' as const,
+        metadata: {
+          exportedAt: 3000,
+          schemaVersion: '1.0' as const,
+          totalCount: 2,
+        },
+        memories: [
+          null as any,
+          { topic: '', content: 'no topic' } as any,
+          createSampleItem({ id: 'valid-1', topic: 'valid/topic', content: 'valid' }),
+        ],
+      };
+
+      const result = await store.importKnowledgeBase(bundle, { mode: 'merge' });
+      expect(result.success).toBe(false);
+      expect(result.importedCount).toBe(1);
+      expect(result.skippedCount).toBe(2);
+      expect(result.errors.length).toBe(2);
+      expect(await store.get('valid-1')).not.toBeNull();
+    });
+  });
+
 });

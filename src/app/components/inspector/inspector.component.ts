@@ -9,6 +9,9 @@ import {
   MemoryCategory,
   MemorySearchResult,
   MemoryStats,
+  MemoryExportBundle,
+  MemoryImportOptions,
+  MemoryImportResult,
 } from '@webmcp/angular';
 import { ViewGuideService } from '../../services/view-guide.service';
 
@@ -74,6 +77,22 @@ import { ViewGuideService } from '../../services/view-guide.service';
               Clear Logs
             </button>
           } @else {
+            <button
+              (click)="exportKnowledgeBase()"
+              class="px-2.5 py-1 text-xs rounded-lg bg-white hover:bg-purple-50 text-slate-700 hover:text-purple-700 border border-slate-200 transition-colors shadow-xs font-semibold flex items-center gap-1 cursor-pointer"
+              title="Export memory knowledge base as JSON">
+              <span>⬇ Export JSON</span>
+            </button>
+            <label
+              class="px-2.5 py-1 text-xs rounded-lg bg-white hover:bg-purple-50 text-slate-700 hover:text-purple-700 border border-slate-200 transition-colors shadow-xs font-semibold flex items-center gap-1 cursor-pointer"
+              title="Import memory knowledge base from JSON file">
+              <span>⬆ Import JSON</span>
+              <input
+                type="file"
+                accept=".json,application/json"
+                (change)="onFileSelected($event)"
+                class="hidden" />
+            </label>
             <button
               (click)="toggleAddForm()"
               class="px-2.5 py-1 text-xs rounded-lg bg-purple-600 hover:bg-purple-700 text-white transition-colors shadow-xs font-semibold flex items-center gap-1 cursor-pointer">
@@ -157,6 +176,23 @@ import { ViewGuideService } from '../../services/view-guide.service';
       } @else {
         <!-- Memory Store Container -->
         <div class="flex-1 flex flex-col min-h-0 space-y-3">
+          <!-- Feedback Message Banner -->
+          @if (statusFeedback(); as fb) {
+            <div
+              class="p-2.5 rounded-xl text-xs font-medium flex items-center justify-between gap-2 border transition-all"
+              [ngClass]="fb.type === 'error' ? 'bg-rose-50 text-rose-800 border-rose-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'">
+              <div class="flex items-center gap-1.5">
+                <span>{{ fb.type === 'error' ? '⚠️' : '✓' }}</span>
+                <span>{{ fb.message }}</span>
+              </div>
+              <button
+                (click)="clearFeedback()"
+                class="text-xs hover:opacity-75 cursor-pointer font-bold px-1">
+                ✕
+              </button>
+            </div>
+          }
+
           <!-- Telemetry Stats Ribbon -->
           <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 text-[11px] font-medium text-slate-700">
             <div class="p-2 rounded-xl bg-purple-50/80 border border-purple-200/70 flex flex-col">
@@ -648,6 +684,86 @@ export class InspectorComponent {
 
   openGuide(): void {
     this.guideService.openGuide('inspector');
+  }
+
+  readonly statusFeedback = signal<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  clearFeedback(): void {
+    this.statusFeedback.set(null);
+  }
+
+  async exportKnowledgeBase(filename?: string): Promise<void> {
+    try {
+      await this.memoryService.downloadKnowledgeBaseJson(filename);
+      this.statusFeedback.set({
+        message: 'Knowledge base exported successfully.',
+        type: 'success',
+      });
+      setTimeout(() => {
+        if (this.statusFeedback()?.type === 'success') {
+          this.statusFeedback.set(null);
+        }
+      }, 4000);
+    } catch (err: any) {
+      this.statusFeedback.set({
+        message: `Export failed: ${err?.message || 'Unknown error'}`,
+        type: 'error',
+      });
+    }
+  }
+
+  async onFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input?.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      await this.importKnowledgeBaseFromJson(text, { mode: 'merge' });
+    } catch (err: any) {
+      this.statusFeedback.set({
+        message: `Failed to read import file: ${err?.message || 'Invalid file'}`,
+        type: 'error',
+      });
+    } finally {
+      if (input) {
+        input.value = '';
+      }
+    }
+  }
+
+  async importKnowledgeBaseFromJson(
+    jsonString: string,
+    options?: MemoryImportOptions
+  ): Promise<MemoryImportResult> {
+    try {
+      const result = await this.memoryService.importKnowledgeBaseFromJson(jsonString, options);
+      if (result.success) {
+        this.statusFeedback.set({
+          message: `Imported ${result.importedCount} memories successfully (${result.skippedCount} skipped).`,
+          type: 'success',
+        });
+        setTimeout(() => {
+          if (this.statusFeedback()?.type === 'success') {
+            this.statusFeedback.set(null);
+          }
+        }, 5000);
+      } else {
+        this.statusFeedback.set({
+          message: `Import failed: ${result.errors.join(', ')}`,
+          type: 'error',
+        });
+      }
+      return result;
+    } catch (err: any) {
+      this.statusFeedback.set({
+        message: `Import error: ${err?.message || 'Unknown error'}`,
+        type: 'error',
+      });
+      throw err;
+    }
   }
 
   formatTime(timestamp: number): string {

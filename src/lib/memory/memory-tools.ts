@@ -12,6 +12,10 @@ import {
   MemoryItem,
   MemorySearchResult,
   MemorySessionSummary,
+  MemoryExportBundle,
+  MemoryImportMode,
+  MemoryImportOptions,
+  MemoryImportResult,
 } from './memory.types';
 
 /* ==========================================================================
@@ -116,6 +120,37 @@ export interface MemSessionSummaryResult {
   session?: MemorySessionSummary | null;
   count?: number;
   summaries?: MemorySessionSummary[];
+}
+
+
+export interface MemExportParams {
+  category?: MemoryCategory;
+  tags?: string[];
+}
+
+export interface MemExportResult {
+  success: boolean;
+  bundle: MemoryExportBundle;
+  totalExported: number;
+}
+
+export interface MemImportParams {
+  bundle?: MemoryExportBundle;
+  bundleJson?: string;
+  bundle_json?: string;
+  mode?: MemoryImportMode;
+  preserveTimestamps?: boolean;
+  preserve_timestamps?: boolean;
+}
+
+export interface MemImportResultPayload {
+  success: boolean;
+  importedCount: number;
+  skippedCount: number;
+  errors: string[];
+  totalBefore: number;
+  totalAfter: number;
+  mode: MemoryImportMode;
 }
 
 const VALID_CATEGORIES: MemoryCategory[] = [
@@ -812,6 +847,148 @@ export function createMemSessionSummaryTool(
  * @param searchEngine Lexical BM25 search engine
  * @returns Array of WebMcpToolDefinition objects ready for registration
  */
+
+/**
+ * 7. mem_export: Export in-browser agent memory and sessions as a portable JSON knowledge base bundle.
+ */
+export function createMemExportTool(
+  store: IWebMcpMemoryStore
+): WebMcpToolDefinition<MemExportParams, MemExportResult> {
+  return {
+    name: 'mem_export',
+    description:
+      'Export the agent in-browser knowledge base as a portable JSON bundle. Supports optional filtering by category or tags.',
+    parameters: {
+      type: 'object',
+      properties: {
+        category: {
+          type: 'string',
+          enum: VALID_CATEGORIES,
+          description: 'Filter exported memories by category (observation, fact, rule, context, preference, session)',
+        },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Filter exported memories by keyword tags',
+        },
+      },
+    },
+    handler: async (params: MemExportParams = {}): Promise<MemExportResult> => {
+      const filter: { category?: MemoryCategory; tags?: string[] } = {};
+      if (params && params.category && VALID_CATEGORIES.includes(params.category)) {
+        filter.category = params.category;
+      }
+      if (params && Array.isArray(params.tags) && params.tags.length > 0) {
+        filter.tags = params.tags;
+      }
+
+      const bundle = await store.exportKnowledgeBase(filter);
+      return {
+        success: true,
+        bundle,
+        totalExported: bundle.memories.length,
+      };
+    },
+  };
+}
+
+/**
+ * 8. mem_import: Import a knowledge base bundle into memory store with merge (deduplicate) or replace strategy.
+ */
+export function createMemImportTool(
+  store: IWebMcpMemoryStore,
+  searchEngine: IWebMcpMemorySearchEngine
+): WebMcpToolDefinition<MemImportParams, MemImportResultPayload> {
+  return {
+    name: 'mem_import',
+    description:
+      'Import a portable knowledge base JSON bundle into in-browser memory store with "merge" (incremental deduplication) or "replace" (clean wipe) mode.',
+    parameters: {
+      type: 'object',
+      properties: {
+        bundle: {
+          type: 'object',
+          description: 'Parsed MemoryExportBundle object containing version "1.0", metadata, and memories array',
+        },
+        bundleJson: {
+          type: 'string',
+          description: 'Raw JSON string representation of a MemoryExportBundle',
+        },
+        bundle_json: {
+          type: 'string',
+          description: 'Snake_case alias for bundleJson',
+        },
+        mode: {
+          type: 'string',
+          enum: ['merge', 'replace'],
+          description: 'Import strategy: "merge" for incremental upsert/deduplication, "replace" for complete store wipe. Default: "merge"',
+        },
+        preserveTimestamps: {
+          type: 'boolean',
+          description: 'Whether to preserve original createdAt/updatedAt timestamps. Default: true',
+        },
+        preserve_timestamps: {
+          type: 'boolean',
+          description: 'Snake_case alias for preserveTimestamps',
+        },
+      },
+    },
+    handler: async (params: MemImportParams = {}): Promise<MemImportResultPayload> => {
+      let bundle = params?.bundle;
+
+      const rawJson = params?.bundleJson || params?.bundle_json;
+      if (!bundle && typeof rawJson === 'string') {
+        try {
+          bundle = JSON.parse(rawJson);
+        } catch (e: any) {
+          const stats = await store.getStats();
+          return {
+            success: false,
+            importedCount: 0,
+            skippedCount: 0,
+            errors: [`Failed to parse bundle JSON string: ${e?.message || 'Invalid JSON'}`],
+            totalBefore: stats.totalCount,
+            totalAfter: stats.totalCount,
+            mode: params?.mode || 'merge',
+          };
+        }
+      }
+
+      if (!bundle || typeof bundle !== 'object') {
+        throw new Error('mem_import: "bundle" (object) or "bundleJson" (valid JSON string) is required.');
+      }
+
+      const mode: MemoryImportMode = params?.mode === 'replace' ? 'replace' : 'merge';
+      const preserveTimestamps =
+        params?.preserveTimestamps !== undefined
+          ? params.preserveTimestamps
+          : params?.preserve_timestamps !== undefined
+          ? params.preserve_timestamps
+          : true;
+
+      const importResult = await store.importKnowledgeBase(bundle, {
+        mode,
+        preserveTimestamps,
+      });
+
+      // Synchronize BM25 search engine
+      searchEngine.clear();
+      const allMemories = await store.getAll();
+      searchEngine.index(allMemories);
+
+      return {
+        success: importResult.success,
+        importedCount: importResult.importedCount,
+        skippedCount: importResult.skippedCount,
+        errors: importResult.errors,
+        totalBefore: importResult.totalBefore,
+        totalAfter: importResult.totalAfter,
+        mode,
+      };
+    },
+  };
+}
+
 export function createWebMcpMemoryTools(
   store: IWebMcpMemoryStore,
   searchEngine: IWebMcpMemorySearchEngine
@@ -823,5 +1000,7 @@ export function createWebMcpMemoryTools(
     createMemPinTool(store, searchEngine) as unknown as WebMcpToolDefinition,
     createMemUnpinTool(store, searchEngine) as unknown as WebMcpToolDefinition,
     createMemSessionSummaryTool(store, searchEngine) as unknown as WebMcpToolDefinition,
+    createMemExportTool(store) as unknown as WebMcpToolDefinition,
+    createMemImportTool(store, searchEngine) as unknown as WebMcpToolDefinition,
   ];
 }

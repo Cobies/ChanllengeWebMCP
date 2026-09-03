@@ -28,8 +28,8 @@ describe('WebMCP Declarative Memory Tools', () => {
   });
 
   describe('Tool Registration & Schema Invariants', () => {
-    it('should create all 6 declarative memory tools', () => {
-      expect(tools.length).toBe(6);
+    it('should create all 8 declarative memory tools', () => {
+      expect(tools.length).toBe(8);
       const names = tools.map((t) => t.name);
       expect(names).toContain('mem_save');
       expect(names).toContain('mem_search');
@@ -37,6 +37,8 @@ describe('WebMCP Declarative Memory Tools', () => {
       expect(names).toContain('mem_pin');
       expect(names).toContain('mem_unpin');
       expect(names).toContain('mem_session_summary');
+      expect(names).toContain('mem_export');
+      expect(names).toContain('mem_import');
     });
 
     it('should define valid WebMcpToolDefinition properties and JSON schemas for each tool', () => {
@@ -524,6 +526,190 @@ describe('WebMCP Declarative Memory Tools', () => {
       await expect(sessionTool.handler({ action: 'save' })).rejects.toThrow();
       // action 'get' without sessionId
       await expect(sessionTool.handler({ action: 'get' })).rejects.toThrow();
+    });
+  });
+
+  
+  describe('mem_export Tool', () => {
+    let exportTool: WebMcpToolDefinition;
+
+    beforeEach(() => {
+      exportTool = toolMap.get('mem_export')!;
+    });
+
+    it('should export all memories and sessions without filters', async () => {
+      await store.save({
+        id: '1',
+        topic: 'rule/auth',
+        content: 'Auth rule',
+        category: 'rule',
+        tags: ['security'],
+        pinned: true,
+        createdAt: 1000,
+        updatedAt: 1000,
+        lastAccessedAt: 1000,
+        accessCount: 0,
+      });
+      await store.save({
+        id: '2',
+        topic: 'fact/db',
+        content: 'PostgreSQL DB',
+        category: 'fact',
+        tags: ['db'],
+        pinned: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+        lastAccessedAt: 1000,
+        accessCount: 0,
+      });
+
+      const res: any = await exportTool.handler({});
+      expect(res.success).toBe(true);
+      expect(res.totalExported).toBe(2);
+      expect(res.bundle.version).toBe('1.0');
+      expect(res.bundle.memories.length).toBe(2);
+    });
+
+    it('should filter export by category and tags', async () => {
+      await store.save({
+        id: '1',
+        topic: 'rule/auth',
+        content: 'Auth rule',
+        category: 'rule',
+        tags: ['security', 'core'],
+        pinned: true,
+        createdAt: 1000,
+        updatedAt: 1000,
+        lastAccessedAt: 1000,
+        accessCount: 0,
+      });
+      await store.save({
+        id: '2',
+        topic: 'fact/db',
+        content: 'PostgreSQL DB',
+        category: 'fact',
+        tags: ['db'],
+        pinned: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+        lastAccessedAt: 1000,
+        accessCount: 0,
+      });
+
+      const catRes: any = await exportTool.handler({ category: 'rule' });
+      expect(catRes.totalExported).toBe(1);
+      expect(catRes.bundle.memories[0].topic).toBe('rule/auth');
+
+      const tagRes: any = await exportTool.handler({ tags: ['core'] });
+      expect(tagRes.totalExported).toBe(1);
+      expect(tagRes.bundle.memories[0].topic).toBe('rule/auth');
+    });
+  });
+
+  describe('mem_import Tool', () => {
+    let importTool: WebMcpToolDefinition;
+
+    beforeEach(() => {
+      importTool = toolMap.get('mem_import')!;
+    });
+
+    it('should import bundle object and re-synchronize BM25 search index', async () => {
+      const bundle = {
+        version: '1.0' as const,
+        metadata: {
+          exportedAt: Date.now(),
+          schemaVersion: '1.0' as const,
+          totalCount: 1,
+        },
+        memories: [
+          {
+            id: 'imported-rule',
+            topic: 'security/cors-policy',
+            content: 'Always restrict allowed origins to trusted domains.',
+            category: 'rule' as const,
+            tags: ['security', 'cors'],
+            pinned: true,
+            createdAt: 1000,
+            updatedAt: 1000,
+            lastAccessedAt: 1000,
+            accessCount: 0,
+          },
+        ],
+      };
+
+      const res: any = await importTool.handler({ bundle, mode: 'merge' });
+      expect(res.success).toBe(true);
+      expect(res.importedCount).toBe(1);
+      expect(res.totalAfter).toBe(1);
+
+      // Verify search engine can find it via BM25
+      const searchRes = searchEngine.search('restrict allowed origins trusted domains');
+      expect(searchRes.length).toBeGreaterThanOrEqual(1);
+      expect(searchRes[0].item.topic).toBe('security/cors-policy');
+    });
+
+    it('should import bundle from raw bundleJson string with replace mode', async () => {
+      await store.save({
+        id: 'old-item',
+        topic: 'old-topic',
+        content: 'Old',
+        category: 'observation',
+        tags: [],
+        pinned: false,
+        createdAt: 100,
+        updatedAt: 100,
+        lastAccessedAt: 100,
+        accessCount: 0,
+      });
+
+      const bundleJson = JSON.stringify({
+        version: '1.0',
+        metadata: {
+          exportedAt: Date.now(),
+          schemaVersion: '1.0',
+          totalCount: 1,
+        },
+        memories: [
+          {
+            id: 'replaced-item',
+            topic: 'clean/slate',
+            content: 'Store was replaced.',
+            category: 'fact',
+            tags: [],
+            pinned: false,
+            createdAt: 200,
+            updatedAt: 200,
+            lastAccessedAt: 200,
+            accessCount: 0,
+          },
+        ],
+      });
+
+      const res: any = await importTool.handler({ bundleJson, mode: 'replace' });
+      expect(res.success).toBe(true);
+      expect(res.importedCount).toBe(1);
+      expect(res.totalBefore).toBe(1);
+      expect(res.totalAfter).toBe(1);
+
+      expect(await store.get('old-item')).toBeNull();
+      expect(await store.get('replaced-item')).not.toBeNull();
+    });
+
+    it('should handle invalid JSON string gracefully', async () => {
+      const res: any = await importTool.handler({ bundleJson: 'not-valid-json' });
+      expect(res.success).toBe(false);
+      expect(res.errors[0]).toContain('Failed to parse bundle JSON string');
+    });
+
+    it('should throw error when neither bundle nor bundleJson is provided', async () => {
+      let threw = false;
+      try {
+        await importTool.handler({});
+      } catch (err: any) {
+        threw = true;
+        expect(err.message).toContain('"bundle" (object) or "bundleJson"');
+      }
+      expect(threw).toBe(true);
     });
   });
 

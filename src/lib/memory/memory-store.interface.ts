@@ -3,6 +3,9 @@ import {
   MemoryItem,
   MemorySessionSummary,
   MemoryStats,
+  MemoryExportBundle,
+  MemoryImportOptions,
+  MemoryImportResult,
 } from './memory.types';
 
 /**
@@ -48,4 +51,10 @@ export interface IWebMcpMemoryStore {
 
   /** Retrieve past session summaries sorted chronologically descending */
   getSessionSummaries(limit?: number): Promise<MemorySessionSummary[]>;
+
+  /** Export knowledge base as portable JSON bundle */
+  exportKnowledgeBase(filter?: { category?: MemoryCategory; tags?: string[] }): Promise<MemoryExportBundle>;
+
+  /** Import knowledge base from portable JSON bundle with merge or replace strategy */
+  importKnowledgeBase(bundle: MemoryExportBundle, options?: MemoryImportOptions): Promise<MemoryImportResult>;
 }
