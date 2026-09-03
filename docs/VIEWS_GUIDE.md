@@ -114,6 +114,9 @@ The Inspector is the real-time observability console for the Model Context Proto
 - **Parameters & Payload Inspector**: Expandable JSON code blocks displaying exact input arguments and returned result payloads.
 - **Status & Search Filtering**: Filter logs by success or error status, or search by tool name.
 - **Log Management**: Clear execution history or export audit traces.
+- **Memory Management & Knowledge Base Tab**:
+  - Inspection of active episodic memories, pinned directives, and session summaries.
+  - One-click Knowledge Base JSON export and import modal with merge/replace strategy selection.
 
 ---
 

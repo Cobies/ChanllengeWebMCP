@@ -44,6 +44,8 @@ This document provides the complete, authoritative specification for all **WebMC
 | | [`mem_pin`](#35-mem_pin) | Global / Inspector | Pins a critical memory/rule so it is never evicted from working context |
 | | [`mem_unpin`](#36-mem_unpin) | Global / Inspector | Unpins a previously pinned memory item |
 | | [`mem_session_summary`](#37-mem_session_summary) | Global / Inspector | Records, retrieves, or lists multi-turn session summaries |
+| | [`mem_export`](#38-mem_export) | Global / Inspector | Exports knowledge base and session summaries as portable JSON bundle |
+| | [`mem_import`](#39-mem_import) | Global / Inspector | Imports JSON knowledge base bundle with merge/replace strategies and BM25 re-indexing |
 
 ---
 
@@ -705,4 +707,120 @@ interface TakeScreenshotResult {
   }
 }
 ```
+
+---
+
+### 38. `mem_export`
+* **Route**: Global / Inspector
+* **Purpose**: Exports the in-browser agent knowledge base and session summaries as a portable, structured JSON bundle (`MemoryExportBundle` v1.0). Supports selective filtering by memory category or keyword tags.
+
+#### Parameter Schema
+```json
+{
+  "type": "object",
+  "properties": {
+    "category": {
+      "type": "string",
+      "enum": ["observation", "fact", "rule", "context", "preference", "session"],
+      "description": "Filter exported memories by category"
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Filter exported memories by keyword tags"
+    }
+  }
+}
+```
+
+#### Return Structure (`MemExportResult`)
+```typescript
+interface MemExportResult {
+  success: boolean;
+  bundle: MemoryExportBundle;
+  totalExported: number;
+}
+
+interface MemoryExportBundle {
+  version: '1.0';
+  metadata: {
+    exportedAt: string;
+    totalCount: number;
+    source?: string;
+    tags?: string[];
+    description?: string;
+    custom?: Record<string, unknown>;
+  };
+  memories: MemoryItem[];
+  sessions?: MemorySessionSummary[];
+}
+```
+
+---
+
+### 39. `mem_import`
+* **Route**: Global / Inspector
+* **Purpose**: Imports a JSON knowledge base bundle into the in-browser memory store using either incremental merge or complete replace strategies, with automatic BM25 search engine inverted index re-synchronization.
+
+#### Parameter Schema
+```json
+{
+  "type": "object",
+  "properties": {
+    "bundle": {
+      "type": "object",
+      "description": "Parsed MemoryExportBundle object containing version '1.0', metadata, and memories array"
+    },
+    "bundleJson": {
+      "type": "string",
+      "description": "Raw JSON string representation of a MemoryExportBundle"
+    },
+    "bundle_json": {
+      "type": "string",
+      "description": "Snake_case alias for bundleJson"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["merge", "replace"],
+      "default": "merge",
+      "description": "Import strategy: 'merge' for incremental upsert/deduplication, 'replace' for complete store wipe"
+    },
+    "preserveTimestamps": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether to preserve original createdAt/updatedAt timestamps"
+    },
+    "preserve_timestamps": {
+      "type": "boolean",
+      "default": true,
+      "description": "Snake_case alias for preserveTimestamps"
+    }
+  }
+}
+```
+
+#### Return Structure (`MemImportResultPayload`)
+```typescript
+interface MemImportResultPayload {
+  success: boolean;
+  importedCount: number;
+  skippedCount: number;
+  errors: string[];
+  totalBefore: number;
+  totalAfter: number;
+  mode: 'merge' | 'replace';
+}
+```
+
+#### Notes & BM25 Index Synchronization
+* **Automatic BM25 Search Re-Indexing**: Upon completing persistence in the storage backend (IndexedDB or ephemeral fallback), `mem_import` triggers an automatic synchronization cycle on the pure TypeScript BM25 search engine:
+  1. Calls `searchEngine.clear()` to purge stale inverted index postings.
+  2. Fetches all active records via `store.getAll()`.
+  3. Re-indexes the entire collection via `searchEngine.index(allMemories)`.
+  This ensures newly imported facts, rules, and episodic notes are immediately discoverable via `mem_search` with accurate term frequency and inverse document frequency (IDF) scoring.
+* **Dual Import Strategies**:
+  - `merge`: Performs deduplication by matching memory `id` or `topic`. Existing records are updated with imported values while maintaining untouched entries.
+  - `replace`: Atomically clears the current store before importing the bundle, resetting the knowledge base to the exact state captured in the bundle.
+* **Format Flexibility**: Supports pre-parsed JavaScript objects via `bundle` as well as raw stringified JSON payloads via `bundleJson` (or snake_case alias `bundle_json`).
+
 

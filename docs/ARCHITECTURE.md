@@ -223,12 +223,19 @@ A zero-dependency, client-side episodic and semantic memory system that provides
 - **Pure TypeScript BM25 Lexical Search (`WebMcpBm25SearchEngine`)**:
   - Robertson-Spärck Jones IDF scoring with field-weighted boosts ($\text{topic}: 2.0\times, \text{tags}: 1.5\times, \text{content}: 1.0\times$).
   - Multilingual Unicode tokenizer with stopword pruning and in-memory incremental inverted index.
-- **6 Standardized WebMCP Memory Tools**:
+- **8 Standardized WebMCP Memory Tools**:
   - `mem_save`: Persists or updates episodic observations, facts, rules, contexts, preferences, or sessions.
   - `mem_search`: BM25 lexical ranking queries with category, tag, and date filtering.
   - `mem_context`: Formats consolidated prompt-ready context blocks with pinned rules.
   - `mem_pin` / `mem_unpin`: Pins or unpins critical directives to prevent eviction.
   - `mem_session_summary`: Multi-turn session summarization and key learning tracking.
+  - `mem_export`: Exports knowledge base and session summaries as portable JSON bundle.
+  - `mem_import`: Imports JSON knowledge base bundles with merge or replace strategies and automated BM25 re-indexing.
+- **Knowledge Base Portability & Synchronization**:
+  - Portable JSON Knowledge Base Bundles (`MemoryExportBundle` v1.0) with schema versioning, system metadata, memory array, and session summaries.
+  - Selective export filtering by category or tags.
+  - Dual import strategies: `merge` (incremental deduplication by topic/ID) and `replace` (clean store wipe and full reload).
+  - Automatic pure TypeScript BM25 search engine inverted index re-synchronization post-import.
 - **Reactive Signals State (`WebMcpMemoryService`)**:
   - Signals (`memories()`, `pinnedMemories()`, `stats()`, `isReady()`, `recentQueries()`) powering the live Inspector UI.
 - **Passive Execution Interceptors**:
