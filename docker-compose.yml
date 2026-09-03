@@ -1,6 +1,7 @@
 services:
   challenge-webmcp:
-    image: cobies/challenge-webmcp:latest
+    build: .
+    image: challenge-webmcp:latest
     container_name: challenge-webmcp-ssr
     restart: unless-stopped
     ports:

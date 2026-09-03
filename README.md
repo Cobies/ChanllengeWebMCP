@@ -204,6 +204,8 @@ The project includes a production-ready, multi-stage Docker configuration using 
 ### 1. Build Image Locally
 ```bash
 docker compose build
+# Or build directly with Docker CLI:
+# docker build -t challenge-webmcp:latest .
 ```
 
 ### 2. Run with Docker Compose
@@ -212,11 +214,17 @@ docker compose up -d
 ```
 The application will be accessible at `http://127.0.0.1:50016` (mapped to internal SSR port `4000`).
 
-### 3. Deploy in Portainer (Stack Web Editor)
+### 3. (Optional) Tag & Push to Container Registry
+```bash
+docker tag challenge-webmcp:latest <your-dockerhub-username>/challenge-webmcp:latest
+docker push <your-dockerhub-username>/challenge-webmcp:latest
+```
+
+### 4. Deploy in Portainer (Stack Web Editor)
 ```yaml
 services:
   challenge-webmcp:
-    image: cobies/challenge-webmcp:latest
+    image: <your-dockerhub-username>/challenge-webmcp:latest
     container_name: challenge-webmcp-ssr
     restart: unless-stopped
     ports:
