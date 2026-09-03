@@ -57,9 +57,9 @@ export interface ToolExecutionMeta {
 ```
 
 #### Scenario: Query available models from bridge
-- **GIVEN** an active internet connection to `https://bridge.cobiesscooby.com/v1`
+- **GIVEN** an active internet connection to `https://api.your-proxy.com/v1`
 - **WHEN** `CopilotBridgeService.fetchModels()` is called on service initialization
-- **THEN** the service sends a `GET` request to `https://bridge.cobiesscooby.com/v1/models`
+- **THEN** the service sends a `GET` request to `https://api.your-proxy.com/v1/models`
 - **AND** updates the `availableModels` signal with the retrieved model IDs (including `gemini-3.7-flash-high`).
 
 ---

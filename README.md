@@ -29,7 +29,7 @@ Explore the comprehensive documentation guides created for developers, architect
 ## 🌟 Key Capabilities & Highlights
 
 1. **🤖 Autonomous In-App AI Copilot & SubAgents Delegation**:
-   - Built-in conversational chat drawer powered by an AI Copilot connected through a secure bridge proxy (`https://bridge.cobiesscooby.com/v1`).
+   - Built-in conversational chat drawer powered by an AI Copilot connected through an OpenAI-compatible bridge proxy (`https://api.your-proxy.com/v1` by default). The Copilot proxy is fully decoupled and configurable via Angular Dependency Injection: developers can provide `COPILOT_API_BASE` in `src/app/app.config.ts` (`{ provide: COPILOT_API_BASE, useValue: 'https://my-proxy.company.com/v1' }`) to point to their own enterprise or local proxy endpoint.
    - Dynamic WebMCP-to-OpenAI function schema conversion with autonomous multi-turn recursive execution loop (up to 5 turns).
    - Dynamic delegation meta-tool (`delegate_to_subagent`) that offloads complex sub-tasks to specialized domain workers (`3d-specialist`, `analytics-specialist`, `audit-specialist`), saving up to **85% of LLM context tokens**.
 
@@ -248,6 +248,15 @@ services:
 > *"Open the purchase order modal for SKU RET-102 with 50 units, critical priority, and submit the order."*
 
 4. Watch the AI Copilot reason in real time, invoke WebMCP tools autonomously, update the dashboard / 3D viewport, and render rich visual cards!
+
+> **💡 Configurable Proxy Endpoint**:
+> By default, the AI Copilot and SubAgents connect to `DEFAULT_COPILOT_API_BASE` (`https://api.your-proxy.com/v1`). You can point the Copilot to any custom OpenAI-compatible proxy by providing `COPILOT_API_BASE` in `src/app/app.config.ts`:
+> ```typescript
+> import { COPILOT_API_BASE } from './services/copilot-bridge.service';
+> // In appConfig providers:
+> { provide: COPILOT_API_BASE, useValue: 'https://your-custom-proxy.com/v1' }
+> ```
+
 
 ---
 

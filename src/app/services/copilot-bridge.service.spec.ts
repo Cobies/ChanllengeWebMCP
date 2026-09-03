@@ -5,6 +5,8 @@ import { WebMcpService, WebMcpToolDefinition } from '@webmcp/angular';
 import {
   CopilotBridgeService,
   BRIDGE_API_BASE,
+  DEFAULT_COPILOT_API_BASE,
+  COPILOT_API_BASE,
   DEFAULT_FALLBACK_MODELS,
 } from './copilot-bridge.service';
 import {
@@ -69,6 +71,28 @@ describe('CopilotBridgeService & Autonomous Agent Loop', () => {
       expect(service.availableModels().map((m) => m.id)).toEqual(
         DEFAULT_FALLBACK_MODELS.map((m) => m.id)
       );
+    });
+
+    it('should use configured COPILOT_API_BASE when provided', async () => {
+      const customBase = 'https://custom-proxy.internal.corp/v1';
+      const customService = new CopilotBridgeService(
+        mockHttp as any,
+        webmcpService,
+        registry,
+        undefined,
+        undefined,
+        undefined,
+        customBase
+      );
+
+      let requestedUrl = '';
+      mockHttp.get = (url: string) => {
+        requestedUrl = url;
+        return of({ data: DEFAULT_FALLBACK_MODELS });
+      };
+
+      await customService.fetchModels();
+      expect(requestedUrl).toBe(`${customBase}/models`);
     });
   });
 

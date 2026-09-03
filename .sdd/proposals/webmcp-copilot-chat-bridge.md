@@ -2,7 +2,7 @@
 
 ## Intent
 
-Provide an interactive AI Copilot chat drawer in the showcase app connected to the CPAMC Secure Bridge Proxy (`https://bridge.cobiesscooby.com/v1`). It allows users and judges to converse with Gemini 3.7 Flash High, which autonomously discovers and executes `@webmcp/angular` tools (`scene_3d_action`, `take_screenshot`, `form_action_runner`) in real time, inspects visual outputs, and updates UI state.
+Provide an interactive AI Copilot chat drawer in the showcase app connected to the CPAMC Secure Bridge Proxy (`https://api.your-proxy.com/v1`). It allows users and judges to converse with Gemini 3.7 Flash High, which autonomously discovers and executes `@webmcp/angular` tools (`scene_3d_action`, `take_screenshot`, `form_action_runner`) in real time, inspects visual outputs, and updates UI state.
 
 ## Scope
 
@@ -29,7 +29,7 @@ Provide an interactive AI Copilot chat drawer in the showcase app connected to t
 
 ## Approach
 
-1. **Proxy Service (`CopilotBridgeService`)**: Implement HTTP client connecting to `https://bridge.cobiesscooby.com/v1/chat/completions` and `/v1/models`. Transform `WebMcpToolDefinition` into OpenAI function calling format (`{ type: "function", function: { name, description, parameters } }`).
+1. **Proxy Service (`CopilotBridgeService`)**: Implement HTTP client connecting to `https://api.your-proxy.com/v1/chat/completions` and `/v1/models`. Transform `WebMcpToolDefinition` into OpenAI function calling format (`{ type: "function", function: { name, description, parameters } }`).
 2. **Autonomous Tool Loop**: When the model returns `tool_calls`, invoke `WebMcpService.executeTool()`, log execution, append `tool` role messages with results, and reinvoke chat completion until final textual answer.
 3. **Multimodal Feedback**: Parse `take_screenshot` tool results and render data URLs directly in the chat timeline alongside assistant commentary.
 4. **Cyberpunk UI Widget**: Build a floating slide-over drawer with glassmorphism backdrop, reactive signals for conversation state, model selector dropdown, and quick prompt chips.
@@ -60,11 +60,11 @@ Revert changes to `projects/showcase` and delete `copilot-bridge.service.ts` and
 
 - `@angular/common/http` / `provideHttpClient()`
 - Existing `@webmcp/angular` library services
-- CPAMC Secure Bridge endpoint (`https://bridge.cobiesscooby.com/v1`)
+- CPAMC Secure Bridge endpoint (`https://api.your-proxy.com/v1`)
 
 ## Success Criteria
 
-- [ ] Copilot successfully queries models list from `https://bridge.cobiesscooby.com/v1/models`.
+- [ ] Copilot successfully queries models list from `https://api.your-proxy.com/v1/models`.
 - [ ] Users can chat with `gemini-3.7-flash-high` and trigger 3D actions, form fills, and screenshots via natural language.
 - [ ] Tool calls execute autonomously in the browser and return results to the conversation.
 - [ ] Base64 screenshot outputs display visually inside the chat stream.

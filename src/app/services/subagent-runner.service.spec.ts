@@ -6,6 +6,10 @@ import {
   SubAgentRunnerService,
   BUILTIN_SUBAGENT_PROFILES,
 } from './subagent-runner.service';
+import {
+  COPILOT_API_BASE,
+  DEFAULT_COPILOT_API_BASE,
+} from './copilot-bridge.service';
 import { ChatCompletionResponse } from './copilot-bridge.types';
 import { SubAgentRegistryService, createSubAgent } from '@cobies/webmcp-angular';
 
@@ -97,7 +101,8 @@ describe('SubAgentRunnerService (Hierarchical Orchestrator-Worker Engine)', () =
       });
 
       let turnCount = 0;
-      mockHttp.post = (_url: string, body: any) => {
+      mockHttp.post = (url: string, body: any) => {
+        expect(url).toBe(`${DEFAULT_COPILOT_API_BASE}/chat/completions`);
         turnCount++;
         if (turnCount === 1) {
           // Model chooses to call tool
@@ -181,6 +186,44 @@ describe('SubAgentRunnerService (Hierarchical Orchestrator-Worker Engine)', () =
       expect(receipt.status).toBe('failed');
       expect(receipt.error).toContain('Subagent API timeout');
       expect(receipt.summary).toContain('Subagent failed: Subagent API timeout');
+    });
+
+    it('should use configured COPILOT_API_BASE when provided', async () => {
+      const customBase = 'https://custom-proxy.internal.corp/v1';
+      const customRunner = new SubAgentRunnerService(
+        mockHttp as any,
+        webmcpService,
+        subAgentRegistry,
+        customBase
+      );
+
+      let requestedUrl = '';
+      mockHttp.post = (url: string) => {
+        requestedUrl = url;
+        return of({
+          id: 'custom-sub-1',
+          object: 'chat.completion',
+          created: Date.now(),
+          model: 'gemini-2.5-flash',
+          choices: [
+            {
+              index: 0,
+              message: {
+                role: 'assistant',
+                content: 'Custom proxy response',
+              },
+              finish_reason: 'stop',
+            },
+          ],
+        });
+      };
+
+      await customRunner.executeTask({
+        agentType: '3d-specialist',
+        objective: 'Test endpoint routing',
+      });
+
+      expect(requestedUrl).toBe(`${customBase}/chat/completions`);
     });
   });
 

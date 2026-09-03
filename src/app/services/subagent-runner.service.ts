@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, Optional } from '@angular/core';
+import { Injectable, inject, signal, Optional, Inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -22,8 +22,12 @@ import {
   ChatCompletionResponse,
   OpenAiFunctionTool,
 } from './copilot-bridge.types';
+import {
+  COPILOT_API_BASE,
+  DEFAULT_COPILOT_API_BASE,
+} from './copilot-bridge.service';
 
-export const SUBAGENT_API_BASE = 'https://bridge.cobiesscooby.com/v1';
+export const SUBAGENT_API_BASE = DEFAULT_COPILOT_API_BASE;
 
 export const BUILTIN_SUBAGENT_PROFILES: Record<Exclude<SubAgentType, 'custom'>, SubAgentProfile> = {
   '3d-specialist': {
@@ -98,6 +102,7 @@ export class SubAgentRunnerService {
   private readonly http: HttpClient;
   private readonly webmcp: WebMcpService;
   readonly registry: SubAgentRegistryService;
+  private readonly apiBase: string;
 
   readonly activeSubagents = signal<SubAgentTaskRequest[]>([]);
   readonly executionHistory = signal<SubAgentExecutionReceipt[]>([]);
@@ -105,11 +110,21 @@ export class SubAgentRunnerService {
   constructor(
     @Optional() http?: HttpClient,
     @Optional() webmcp?: WebMcpService,
-    @Optional() registry?: SubAgentRegistryService
+    @Optional() registry?: SubAgentRegistryService,
+    @Optional() @Inject(COPILOT_API_BASE) apiBase?: string
   ) {
     this.http = http ?? inject(HttpClient);
     this.webmcp = webmcp ?? inject(WebMcpService);
     this.registry = registry ?? inject(SubAgentRegistryService);
+    if (apiBase) {
+      this.apiBase = apiBase;
+    } else {
+      try {
+        this.apiBase = inject(COPILOT_API_BASE, { optional: true }) ?? DEFAULT_COPILOT_API_BASE;
+      } catch {
+        this.apiBase = DEFAULT_COPILOT_API_BASE;
+      }
+    }
 
     this.initBuiltinSubagents();
   }
@@ -268,7 +283,7 @@ export class SubAgentRunnerService {
 
         const response = await firstValueFrom(
           this.http.post<ChatCompletionResponse>(
-            `${SUBAGENT_API_BASE}/chat/completions`,
+            `${this.apiBase}/chat/completions`,
             requestPayload
           )
         );

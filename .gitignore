@@ -33,3 +33,9 @@ Thumbs.db
 # Local Pi runtime state
 .atl/
 .pi/
+
+# Environment files
+.env
+.env.*
+!.env.example
+

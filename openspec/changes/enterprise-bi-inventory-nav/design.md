@@ -93,7 +93,7 @@ sequenceDiagram
     User->>Copilot: "Check hardware stock and reorder low units"
     Copilot->>Bridge: sendMessage(prompt)
     Bridge->>Bridge: getOpenAiTools() [Reflects 9 Tools]
-    Bridge->>Bridge: HTTP POST bridge.cobiesscooby.com/v1 (Gemini 3.7)
+    Bridge->>Bridge: HTTP POST api.your-proxy.com/v1 (Gemini 3.7)
     Bridge-->>WebMCP: executeTool('query_inventory', {domain: 'hardware', lowStockOnly: true})
     WebMCP->>Store: queryInventory({domain: 'hardware', lowStockOnly: true})
     Store-->>WebMCP: Returns low-stock SKU-HW-302

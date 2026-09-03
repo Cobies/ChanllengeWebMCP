@@ -32,7 +32,7 @@ Chain strategy: stacked-to-main
 ## Phase 2: Copilot Bridge Service & Autonomous Loop
 
 - [x] 2.1 [RED] Write unit tests in `copilot-bridge.service.spec.ts` for fallback models on HTTP error, malformed JSON recovery, recursion cap at 5 turns, and token-saving screenshot payload sanitization.
-- [x] 2.2 Implement model discovery and fallback recovery in `projects/showcase/src/app/services/copilot-bridge.service.ts` querying `GET https://bridge.cobiesscooby.com/v1/models`.
+- [x] 2.2 Implement model discovery and fallback recovery in `projects/showcase/src/app/services/copilot-bridge.service.ts` querying `GET https://api.your-proxy.com/v1/models`.
 - [x] 2.3 Implement `getOpenAiTools()` schema converter mapping `WebMcpService.getTools()` to OpenAI function schemas.
 - [x] 2.4 Implement `sendMessage()` with autonomous recursive loop executing `WebMcpService.executeTool()`, recursion counter guard (turn <= 5), and base64 preview extraction.
 

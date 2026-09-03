@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, Optional } from '@angular/core';
+import { Injectable, inject, signal, Optional, InjectionToken, Inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -20,11 +20,15 @@ import {
   OpenAiFunctionTool,
   ToolExecutionMeta,
 } from './copilot-bridge.types';
+export * from './copilot-bridge.tokens';
+import {
+  DEFAULT_COPILOT_API_BASE,
+  COPILOT_API_BASE,
+  BRIDGE_API_BASE,
+} from './copilot-bridge.tokens';
 import { SidebarModuleRegistryService } from './sidebar-module-registry.service';
 import { SubAgentRunnerService } from './subagent-runner.service';
 import { SubAgentType, SubAgentExecutionReceipt } from './subagent.types';
-
-export const BRIDGE_API_BASE = 'https://bridge.cobiesscooby.com/v1';
 
 export const DEFAULT_FALLBACK_MODELS: BridgeModel[] = [
   { id: 'gemini-3.7-flash-high', object: 'model', owned_by: 'google' },
@@ -72,6 +76,7 @@ export class CopilotBridgeService {
   private readonly subagentRunner?: SubAgentRunnerService;
   private readonly subagentRegistry?: SubAgentRegistryService;
   private readonly memoryService?: WebMcpMemoryService;
+  private readonly apiBase: string;
 
   readonly selectedModel = signal<string>('gemini-3.7-flash-high');
   readonly availableModels = signal<BridgeModel[]>(DEFAULT_FALLBACK_MODELS);
@@ -89,7 +94,8 @@ export class CopilotBridgeService {
     @Optional() registry?: SidebarModuleRegistryService,
     @Optional() subagentRunner?: SubAgentRunnerService,
     @Optional() subagentRegistry?: SubAgentRegistryService,
-    @Optional() memoryService?: WebMcpMemoryService
+    @Optional() memoryService?: WebMcpMemoryService,
+    @Optional() @Inject(COPILOT_API_BASE) apiBase?: string
   ) {
     if (http) {
       this.http = http;
@@ -98,6 +104,16 @@ export class CopilotBridgeService {
         this.http = inject(HttpClient);
       } catch {
         this.http = undefined as any;
+      }
+    }
+
+    if (apiBase) {
+      this.apiBase = apiBase;
+    } else {
+      try {
+        this.apiBase = inject(COPILOT_API_BASE, { optional: true }) ?? DEFAULT_COPILOT_API_BASE;
+      } catch {
+        this.apiBase = DEFAULT_COPILOT_API_BASE;
       }
     }
 
@@ -161,7 +177,7 @@ export class CopilotBridgeService {
   async fetchModels(): Promise<BridgeModel[]> {
     try {
       const response = await firstValueFrom(
-        this.http.get<ModelsResponse>(`${BRIDGE_API_BASE}/models`)
+        this.http.get<ModelsResponse>(`${this.apiBase}/models`)
       );
       if (response && Array.isArray(response.data) && response.data.length > 0) {
         this.availableModels.set(response.data);
@@ -444,7 +460,7 @@ ${catalogTable.trim()}
 
     const response = await firstValueFrom(
       this.http.post<ChatCompletionResponse>(
-        `${BRIDGE_API_BASE}/chat/completions`,
+        `${this.apiBase}/chat/completions`,
         requestPayload
       )
     );

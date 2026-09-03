@@ -139,7 +139,7 @@ A comprehensive, interactive scorecard and verification suite designed for hacka
 ## 5. 🤖 Persistent AI Copilot Drawer (`CopilotChatComponent`)
 
 ### Overview & Architecture
-The Copilot Drawer is an autonomous multimodal assistant connected through an OpenAI-compatible Bridge Proxy (`https://bridge.cobiesscooby.com/v1`).
+The Copilot Drawer is an autonomous multimodal assistant connected through an OpenAI-compatible Bridge Proxy (`https://api.your-proxy.com/v1` by default). The Copilot proxy is completely decoupled and configurable: developers can inject `COPILOT_API_BASE` in `src/app/app.config.ts` (`{ provide: COPILOT_API_BASE, useValue: 'https://my-proxy.company.com/v1' }`) or rely on the default endpoint.
 
 ### Core Autonomous Capabilities
 - **Dynamic Schema Reflection**: Automatically reads all WebMCP tools currently registered on the active route and transforms them into standard function calling schemas in real time.

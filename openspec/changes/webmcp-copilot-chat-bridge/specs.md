@@ -2,7 +2,7 @@
 
 **Change**: `webmcp-copilot-chat-bridge`  
 **Status**: Approved / Complete Spec  
-**Target Environment**: Angular 22, Bun runtime, Tailwind CSS v4, `@webmcp/angular`, CPAMC Bridge Proxy (`https://bridge.cobiesscooby.com/v1`)
+**Target Environment**: Angular 22, Bun runtime, Tailwind CSS v4, `@webmcp/angular`, CPAMC Bridge Proxy (`https://api.your-proxy.com/v1`)
 
 ---
 
@@ -54,13 +54,13 @@ export interface ToolExecutionMeta {
 ```
 
 #### Scenario: Query available models from bridge
-- **GIVEN** an active internet connection to `https://bridge.cobiesscooby.com/v1`
+- **GIVEN** an active internet connection to `https://api.your-proxy.com/v1`
 - **WHEN** `CopilotBridgeService.fetchModels()` is called on service initialization
-- **THEN** the service sends a `GET` request to `https://bridge.cobiesscooby.com/v1/models`
+- **THEN** the service sends a `GET` request to `https://api.your-proxy.com/v1/models`
 - **AND** updates the `availableModels` signal with the retrieved model IDs (including `gemini-3.7-flash-high`).
 
 #### Scenario: Fallback model list on network degradation
-- **GIVEN** `https://bridge.cobiesscooby.com/v1/models` returns an HTTP error or times out
+- **GIVEN** `https://api.your-proxy.com/v1/models` returns an HTTP error or times out
 - **WHEN** `fetchModels()` fails
 - **THEN** `CopilotBridgeService` SHALL populate `availableModels` with default static fallback models `['gemini-3.7-flash-high', 'gemini-2.5-flash', 'gemini-2.5-pro']` without crashing.
 

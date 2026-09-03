@@ -70,7 +70,7 @@ Exit: 0
 ### Correctness (Static Evidence)
 | Requirement | Status | Notes |
 |------------|--------|-------|
-| CPAMC Proxy Integration & Dynamic Model Discovery | ✅ Implemented | `CopilotBridgeService` defines `BRIDGE_API_BASE = 'https://bridge.cobiesscooby.com/v1'`, `DEFAULT_FALLBACK_MODELS`, and `fetchModels()` with safe fallback. |
+| CPAMC Proxy Integration & Dynamic Model Discovery | ✅ Implemented | `CopilotBridgeService` defines `BRIDGE_API_BASE = 'https://api.your-proxy.com/v1'`, `DEFAULT_FALLBACK_MODELS`, and `fetchModels()` with safe fallback. |
 | WebMCP Tool-to-OpenAI Schema Adapter | ✅ Implemented | `getOpenAiTools()` converts WebMCP tool definitions and JSON schema parameters to OpenAI function schemas. |
 | Autonomous Multi-Turn Execution Loop with Recursion Guard | ✅ Implemented | `runAutonomousTurn()` recursive loop handles `tool_calls`, tool execution via `WebMcpService`, and terminates at `MAX_TOOL_TURNS = 5`. |
 | Resilient Error Handling & Payload Validation | ✅ Implemented | Handles malformed JSON arguments, HTTP errors, and tool execution exceptions with inline status reporting. |

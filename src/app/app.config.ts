@@ -14,6 +14,10 @@ import {
   CustomerRetentionAdapter,
   CloudFinOpsAdapter,
 } from './core/bi';
+import {
+  COPILOT_API_BASE,
+  DEFAULT_COPILOT_API_BASE,
+} from './services/copilot-bridge.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -21,6 +25,8 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(),
     provideRouter(routes, withComponentInputBinding()),
     provideClientHydration(),
+    // Configurable AI Copilot & Subagent Proxy base URL (override DEFAULT_COPILOT_API_BASE if custom proxy is used)
+    { provide: COPILOT_API_BASE, useValue: DEFAULT_COPILOT_API_BASE },
     provideWebMcp({
       enableEmulatorFallback: true,
       enableBuiltInScreenshot: true,

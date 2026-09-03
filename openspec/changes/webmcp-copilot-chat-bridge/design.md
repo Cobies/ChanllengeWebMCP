@@ -2,7 +2,7 @@
 
 **Change**: `webmcp-copilot-chat-bridge`  
 **Status**: Ready for Implementation  
-**Target Environment**: Angular 22, Bun runtime, Tailwind CSS v4, `@webmcp/angular`, CPAMC Bridge Proxy (`https://bridge.cobiesscooby.com/v1`)
+**Target Environment**: Angular 22, Bun runtime, Tailwind CSS v4, `@webmcp/angular`, CPAMC Bridge Proxy (`https://api.your-proxy.com/v1`)
 
 ---
 
